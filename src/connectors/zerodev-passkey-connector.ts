@@ -8,6 +8,7 @@ import {
 import {getEntryPoint, KERNEL_V3_1} from "@zerodev/sdk/constants";
 import {UserRejectedRequestError, createPublicClient, http} from "viem";
 import {createKernelAccount, createKernelAccountClient} from "@zerodev/sdk";
+import {get, set, del} from "idb-keyval";
 
 export interface ZeroDevPasskeyConnectorOptions {
   projectId: string;
@@ -21,10 +22,35 @@ export function createZeroDevPasskeyConnector(options: ZeroDevPasskeyConnectorOp
     let kernelClient: ReturnType<typeof createKernelAccountClient> | undefined;
     let kernelAccount: Awaited<ReturnType<typeof createKernelAccount>> | undefined;
 
+    // IndexedDB key for persisting WebAuthn key data
+    const webAuthnStorageKey = `zerodev-webauthn-${projectId}`;
+
     return {
       id: "zerodev-passkey",
       name: "Passkey",
       type: "zerodev-passkey" as const,
+
+      async setup() {
+        // Setup method called when connector is first created
+        console.log("Setting up ZeroDev Passkey connector");
+
+        // Try to auto-reconnect if we have stored credentials
+        try {
+          const storedWebAuthnKey = await get(webAuthnStorageKey);
+          if (storedWebAuthnKey && !kernelClient && !kernelAccount) {
+            console.log("Found stored credentials, attempting auto-reconnection");
+            await this.reconnect();
+            config.emitter.emit("connect", {
+              accounts: [kernelAccount!.address as `0x${string}`],
+              chainId: config.chains[0].id,
+            });
+          }
+        } catch (error) {
+          console.warn("Auto-reconnection during setup failed:", error);
+          // Clear invalid stored data
+          await del(webAuthnStorageKey);
+        }
+      },
 
       async connect({chainId} = {}) {
         try {
@@ -36,8 +62,34 @@ export function createZeroDevPasskeyConnector(options: ZeroDevPasskeyConnectorOp
             transport: http(),
           });
 
+          // If already connected, return existing account
+          if (kernelClient && kernelAccount) {
+            return {
+              accounts: [kernelAccount.address as `0x${string}`],
+              chainId: chain.id,
+            };
+          }
+
+          // Try to restore from IndexedDB first
+          let webAuthnKey;
+          try {
+            const storedWebAuthnKey = await get(webAuthnStorageKey);
+            if (storedWebAuthnKey) {
+              webAuthnKey = storedWebAuthnKey;
+              console.log("Restored WebAuthn key from IndexedDB");
+            } else {
+              throw new Error("No stored WebAuthn key found");
+            }
+          } catch {
+            // Create new passkey if restoration fails
+            webAuthnKey = await createPasskeyOwner();
+
+            // Store the WebAuthn key securely in IndexedDB
+            await set(webAuthnStorageKey, webAuthnKey);
+            console.log("Stored new WebAuthn key in IndexedDB");
+          }
+
           // Create passkey validator
-          const webAuthnKey = await createPasskeyOwner();
           const passkeyValidator = await toPasskeyValidator(publicClient, {
             webAuthnKey,
             entryPoint,
@@ -61,10 +113,15 @@ export function createZeroDevPasskeyConnector(options: ZeroDevPasskeyConnectorOp
             bundlerTransport: http(`https://rpc.zerodev.app/api/v2/bundler/${projectId}`),
           });
 
-          return {
+          const result = {
             accounts: [kernelAccount.address as `0x${string}`],
             chainId: chain.id,
           };
+
+          // Emit connect event
+          config.emitter.emit("connect", result);
+
+          return result;
         } catch (error) {
           console.error("Failed to connect with passkey:", error);
           if (error instanceof Error && error.message.includes("passkey")) {
@@ -77,6 +134,73 @@ export function createZeroDevPasskeyConnector(options: ZeroDevPasskeyConnectorOp
       async disconnect() {
         kernelClient = undefined;
         kernelAccount = undefined;
+        // Clear stored WebAuthn key from IndexedDB
+        await del(webAuthnStorageKey);
+
+        // Emit disconnect event
+        config.emitter.emit("disconnect");
+      },
+
+      async reconnect() {
+        console.log("Reconnecting with passkey");
+        try {
+          const chain = config.chains[0];
+          const entryPoint = getEntryPoint("0.7");
+
+          const publicClient = createPublicClient({
+            chain,
+            transport: http(),
+          });
+
+          // Try to restore from IndexedDB
+          const storedWebAuthnKey = await get(webAuthnStorageKey);
+          if (!storedWebAuthnKey) {
+            throw new Error("No stored WebAuthn key found for reconnection");
+          }
+
+          console.log("Reconnecting with stored WebAuthn key");
+
+          // Create passkey validator with restored key
+          const passkeyValidator = await toPasskeyValidator(publicClient, {
+            webAuthnKey: storedWebAuthnKey,
+            entryPoint,
+            kernelVersion: KERNEL_V3_1,
+            validatorContractVersion: PasskeyValidatorContractVersion.V0_0_2,
+          });
+
+          // Create kernel account
+          kernelAccount = await createKernelAccount(publicClient, {
+            entryPoint,
+            kernelVersion: KERNEL_V3_1,
+            plugins: {
+              sudo: passkeyValidator,
+            },
+          });
+
+          // Create kernel client
+          kernelClient = createKernelAccountClient({
+            account: kernelAccount,
+            chain,
+            bundlerTransport: http(`https://rpc.zerodev.app/api/v2/bundler/${projectId}`),
+          });
+
+          console.log("Successfully reconnected with passkey");
+
+          const result = {
+            accounts: [kernelAccount.address as `0x${string}`],
+            chainId: chain.id,
+          };
+
+          // Emit connect event for successful reconnection
+          config.emitter.emit("connect", result);
+
+          return result;
+        } catch (error) {
+          console.error("Failed to reconnect:", error);
+          // Clear invalid stored data
+          await del(webAuthnStorageKey);
+          throw error;
+        }
       },
 
       async getAccounts() {
@@ -98,8 +222,21 @@ export function createZeroDevPasskeyConnector(options: ZeroDevPasskeyConnectorOp
 
       async isAuthorized() {
         try {
-          return !!(kernelClient && kernelAccount);
-        } catch {
+          console.log("Checking authorization...");
+
+          // Check if we have an active session
+          if (kernelClient && kernelAccount) {
+            console.log("Already have active session");
+            return true;
+          }
+
+          // Check if we have a stored WebAuthn key in IndexedDB
+          const storedWebAuthnKey = await get(webAuthnStorageKey);
+          console.log("Stored WebAuthn key found:", !!storedWebAuthnKey);
+
+          return !!storedWebAuthnKey;
+        } catch (error) {
+          console.error("Authorization check failed:", error);
           return false;
         }
       },

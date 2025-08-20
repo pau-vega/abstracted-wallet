@@ -15,6 +15,7 @@
     "@zerodev/sdk": "^5.4.41",
     "@zerodev/wagmi": "^4.6.7",
     "@zerodev/wallet": "^0.1.5",
+    "idb-keyval": "^6.2.2",
     "permissionless": "^0.2.54",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
