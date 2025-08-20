@@ -11,8 +11,11 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.85.5",
+    "@zerodev/passkey-validator": "^5.5.5",
     "@zerodev/sdk": "^5.4.41",
+    "@zerodev/wagmi": "^4.6.7",
     "@zerodev/wallet": "^0.1.5",
+    "permissionless": "^0.2.54",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router": "^7.8.1",
