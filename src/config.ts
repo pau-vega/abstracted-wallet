@@ -12,6 +12,7 @@ export const config = createConfig({
     createZeroDevPasskeyConnector({
       projectId: ZERODEV_PROJECT_ID,
       appName: "Wagmi Passkeys App",
+      passkeyName: "My Wallet", // Default name (users can customize this)
     }),
   ],
   transports: {

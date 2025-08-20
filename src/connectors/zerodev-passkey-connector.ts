@@ -9,21 +9,27 @@ import {getEntryPoint, KERNEL_V3_1} from "@zerodev/sdk/constants";
 import {UserRejectedRequestError, createPublicClient, http} from "viem";
 import {createKernelAccount, createKernelAccountClient} from "@zerodev/sdk";
 import {get, set, del} from "idb-keyval";
+import {promptPasskeyName} from "../utils/passkey-name-prompt";
 
 export interface ZeroDevPasskeyConnectorOptions {
   projectId: string;
   appName?: string;
+  passkeyName?: string;
 }
 
 export function createZeroDevPasskeyConnector(options: ZeroDevPasskeyConnectorOptions) {
-  const {projectId, appName = "ZeroDev Passkey App"} = options;
+  const {projectId, appName = "ZeroDev Passkey App", passkeyName} = options;
+
+  // Use custom passkey name or fallback to app name with user-friendly suffix
+  const displayName = passkeyName || `${appName} - Passkey`;
 
   return createConnector((config) => {
     let kernelClient: ReturnType<typeof createKernelAccountClient> | undefined;
     let kernelAccount: Awaited<ReturnType<typeof createKernelAccount>> | undefined;
 
-    // IndexedDB key for persisting WebAuthn key data
+    // IndexedDB keys for persisting WebAuthn key data and passkey name
     const webAuthnStorageKey = `zerodev-webauthn-${projectId}`;
+    const passkeyNameStorageKey = `zerodev-passkey-name-${projectId}`;
 
     // Shared function to create kernel account and client
     async function createKernelAccountAndClient(
@@ -75,7 +81,7 @@ export function createZeroDevPasskeyConnector(options: ZeroDevPasskeyConnectorOp
       try {
         // Try to login with existing passkey first
         return await toWebAuthnKey({
-          passkeyName: appName,
+          passkeyName: displayName,
           passkeyServerUrl: `https://passkeys.zerodev.app/api/v3/${projectId}`,
           mode: WebAuthnMode.Login,
           passkeyServerHeaders: {},
@@ -83,13 +89,23 @@ export function createZeroDevPasskeyConnector(options: ZeroDevPasskeyConnectorOp
       } catch {
         // If login fails, try to register a new passkey
         try {
+          // Prompt user for custom passkey name using modal
+          const finalPasskeyName = await promptPasskeyName(displayName);
+
+          // Store the passkey name for later display
+          await set(passkeyNameStorageKey, finalPasskeyName);
+
           return await toWebAuthnKey({
-            passkeyName: appName,
+            passkeyName: finalPasskeyName,
             passkeyServerUrl: `https://passkeys.zerodev.app/api/v3/${projectId}`,
             mode: WebAuthnMode.Register,
             passkeyServerHeaders: {},
           });
-        } catch {
+        } catch (error) {
+          // If user cancelled or there was an error
+          if (error instanceof Error && error.message.includes("cancelled")) {
+            throw new UserRejectedRequestError(error);
+          }
           throw new Error("Failed to create or authenticate passkey");
         }
       }
@@ -116,6 +132,7 @@ export function createZeroDevPasskeyConnector(options: ZeroDevPasskeyConnectorOp
           console.warn("Auto-reconnection during setup failed:", error);
           // Clear invalid stored data
           await del(webAuthnStorageKey);
+          await del(passkeyNameStorageKey);
         }
       },
 
@@ -167,8 +184,9 @@ export function createZeroDevPasskeyConnector(options: ZeroDevPasskeyConnectorOp
       async disconnect() {
         kernelClient = undefined;
         kernelAccount = undefined;
-        // Clear stored WebAuthn key from IndexedDB
+        // Clear stored WebAuthn key and passkey name from IndexedDB
         await del(webAuthnStorageKey);
+        await del(passkeyNameStorageKey);
 
         // Emit disconnect event
         config.emitter.emit("disconnect");
@@ -197,6 +215,7 @@ export function createZeroDevPasskeyConnector(options: ZeroDevPasskeyConnectorOp
           console.error("Failed to reconnect:", error);
           // Clear invalid stored data
           await del(webAuthnStorageKey);
+          await del(passkeyNameStorageKey);
           throw error;
         }
       },
