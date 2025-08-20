@@ -1,10 +1,12 @@
 import {useAccount, useDisconnect, useEnsAvatar, useEnsName} from "wagmi";
+import {usePasskeyName} from "../hooks/use-passkey-name";
 
 export function Account() {
   const {address, connector} = useAccount();
   const {disconnect} = useDisconnect();
   const {data: ensName} = useEnsName({address});
   const {data: ensAvatar} = useEnsAvatar({name: ensName!});
+  const passkeyName = usePasskeyName();
 
   const isPasskey = connector?.name === "Passkey";
 
@@ -24,6 +26,7 @@ export function Account() {
               color: "#2e7d32",
             }}>
             🔐 Secured with Passkey Authentication
+            {passkeyName && <div style={{marginTop: "4px", fontWeight: "600"}}>Passkey: "{passkeyName}"</div>}
           </div>
         )}
       </div>
