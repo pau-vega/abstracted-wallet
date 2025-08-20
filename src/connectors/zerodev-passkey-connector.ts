@@ -25,6 +25,76 @@ export function createZeroDevPasskeyConnector(options: ZeroDevPasskeyConnectorOp
     // IndexedDB key for persisting WebAuthn key data
     const webAuthnStorageKey = `zerodev-webauthn-${projectId}`;
 
+    // Shared function to create kernel account and client
+    async function createKernelAccountAndClient(
+      webAuthnKey: Awaited<ReturnType<typeof toWebAuthnKey>>,
+      chainId?: number
+    ): Promise<{
+      accounts: `0x${string}`[];
+      chainId: number;
+    }> {
+      const chain = config.chains.find((c) => c.id === chainId) || config.chains[0];
+      const entryPoint = getEntryPoint("0.7");
+
+      const publicClient = createPublicClient({
+        chain,
+        transport: http(),
+      });
+
+      // Create passkey validator
+      const passkeyValidator = await toPasskeyValidator(publicClient, {
+        webAuthnKey,
+        entryPoint,
+        kernelVersion: KERNEL_V3_1,
+        validatorContractVersion: PasskeyValidatorContractVersion.V0_0_2,
+      });
+
+      // Create kernel account
+      kernelAccount = await createKernelAccount(publicClient, {
+        entryPoint,
+        kernelVersion: KERNEL_V3_1,
+        plugins: {
+          sudo: passkeyValidator,
+        },
+      });
+
+      // Create kernel client
+      kernelClient = createKernelAccountClient({
+        account: kernelAccount,
+        chain,
+        bundlerTransport: http(`https://rpc.zerodev.app/api/v2/bundler/${projectId}`),
+      });
+
+      return {
+        accounts: [kernelAccount.address as `0x${string}`],
+        chainId: chain.id,
+      };
+    }
+
+    async function createPasskeyOwner() {
+      try {
+        // Try to login with existing passkey first
+        return await toWebAuthnKey({
+          passkeyName: appName,
+          passkeyServerUrl: `https://passkeys.zerodev.app/api/v3/${projectId}`,
+          mode: WebAuthnMode.Login,
+          passkeyServerHeaders: {},
+        });
+      } catch {
+        // If login fails, try to register a new passkey
+        try {
+          return await toWebAuthnKey({
+            passkeyName: appName,
+            passkeyServerUrl: `https://passkeys.zerodev.app/api/v3/${projectId}`,
+            mode: WebAuthnMode.Register,
+            passkeyServerHeaders: {},
+          });
+        } catch {
+          throw new Error("Failed to create or authenticate passkey");
+        }
+      }
+    }
+
     return {
       id: "zerodev-passkey",
       name: "Passkey",
@@ -39,11 +109,8 @@ export function createZeroDevPasskeyConnector(options: ZeroDevPasskeyConnectorOp
           const storedWebAuthnKey = await get(webAuthnStorageKey);
           if (storedWebAuthnKey && !kernelClient && !kernelAccount) {
             console.log("Found stored credentials, attempting auto-reconnection");
-            await this.reconnect();
-            config.emitter.emit("connect", {
-              accounts: [kernelAccount!.address as `0x${string}`],
-              chainId: config.chains[0].id,
-            });
+            const result = await createKernelAccountAndClient(storedWebAuthnKey);
+            config.emitter.emit("connect", result);
           }
         } catch (error) {
           console.warn("Auto-reconnection during setup failed:", error);
@@ -54,16 +121,9 @@ export function createZeroDevPasskeyConnector(options: ZeroDevPasskeyConnectorOp
 
       async connect({chainId} = {}) {
         try {
-          const chain = config.chains.find((c) => c.id === chainId) || config.chains[0];
-          const entryPoint = getEntryPoint("0.7");
-
-          const publicClient = createPublicClient({
-            chain,
-            transport: http(),
-          });
-
           // If already connected, return existing account
           if (kernelClient && kernelAccount) {
+            const chain = config.chains.find((c) => c.id === chainId) || config.chains[0];
             return {
               accounts: [kernelAccount.address as `0x${string}`],
               chainId: chain.id,
@@ -89,34 +149,7 @@ export function createZeroDevPasskeyConnector(options: ZeroDevPasskeyConnectorOp
             console.log("Stored new WebAuthn key in IndexedDB");
           }
 
-          // Create passkey validator
-          const passkeyValidator = await toPasskeyValidator(publicClient, {
-            webAuthnKey,
-            entryPoint,
-            kernelVersion: KERNEL_V3_1,
-            validatorContractVersion: PasskeyValidatorContractVersion.V0_0_2,
-          });
-
-          // Create kernel account
-          kernelAccount = await createKernelAccount(publicClient, {
-            entryPoint,
-            kernelVersion: KERNEL_V3_1,
-            plugins: {
-              sudo: passkeyValidator,
-            },
-          });
-
-          // Create kernel client
-          kernelClient = createKernelAccountClient({
-            account: kernelAccount,
-            chain,
-            bundlerTransport: http(`https://rpc.zerodev.app/api/v2/bundler/${projectId}`),
-          });
-
-          const result = {
-            accounts: [kernelAccount.address as `0x${string}`],
-            chainId: chain.id,
-          };
+          const result = await createKernelAccountAndClient(webAuthnKey, chainId);
 
           // Emit connect event
           config.emitter.emit("connect", result);
@@ -144,14 +177,6 @@ export function createZeroDevPasskeyConnector(options: ZeroDevPasskeyConnectorOp
       async reconnect() {
         console.log("Reconnecting with passkey");
         try {
-          const chain = config.chains[0];
-          const entryPoint = getEntryPoint("0.7");
-
-          const publicClient = createPublicClient({
-            chain,
-            transport: http(),
-          });
-
           // Try to restore from IndexedDB
           const storedWebAuthnKey = await get(webAuthnStorageKey);
           if (!storedWebAuthnKey) {
@@ -160,36 +185,9 @@ export function createZeroDevPasskeyConnector(options: ZeroDevPasskeyConnectorOp
 
           console.log("Reconnecting with stored WebAuthn key");
 
-          // Create passkey validator with restored key
-          const passkeyValidator = await toPasskeyValidator(publicClient, {
-            webAuthnKey: storedWebAuthnKey,
-            entryPoint,
-            kernelVersion: KERNEL_V3_1,
-            validatorContractVersion: PasskeyValidatorContractVersion.V0_0_2,
-          });
-
-          // Create kernel account
-          kernelAccount = await createKernelAccount(publicClient, {
-            entryPoint,
-            kernelVersion: KERNEL_V3_1,
-            plugins: {
-              sudo: passkeyValidator,
-            },
-          });
-
-          // Create kernel client
-          kernelClient = createKernelAccountClient({
-            account: kernelAccount,
-            chain,
-            bundlerTransport: http(`https://rpc.zerodev.app/api/v2/bundler/${projectId}`),
-          });
+          const result = await createKernelAccountAndClient(storedWebAuthnKey);
 
           console.log("Successfully reconnected with passkey");
-
-          const result = {
-            accounts: [kernelAccount.address as `0x${string}`],
-            chainId: chain.id,
-          };
 
           // Emit connect event for successful reconnection
           config.emitter.emit("connect", result);
@@ -272,33 +270,5 @@ export function createZeroDevPasskeyConnector(options: ZeroDevPasskeyConnectorOp
         config.emitter.emit("disconnect");
       },
     };
-
-    async function createPasskeyOwner() {
-      let webAuthnKey;
-
-      try {
-        // Try to login with existing passkey first
-        webAuthnKey = await toWebAuthnKey({
-          passkeyName: appName,
-          passkeyServerUrl: `https://passkeys.zerodev.app/api/v3/${projectId}`,
-          mode: WebAuthnMode.Login,
-          passkeyServerHeaders: {},
-        });
-      } catch {
-        // If login fails, try to register a new passkey
-        try {
-          webAuthnKey = await toWebAuthnKey({
-            passkeyName: appName,
-            passkeyServerUrl: `https://passkeys.zerodev.app/api/v3/${projectId}`,
-            mode: WebAuthnMode.Register,
-            passkeyServerHeaders: {},
-          });
-        } catch {
-          throw new Error("Failed to create or authenticate passkey");
-        }
-      }
-
-      return webAuthnKey;
-    }
   });
 }
