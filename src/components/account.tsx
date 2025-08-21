@@ -5,8 +5,9 @@ import {Button} from "@/components/ui/button";
 import {Badge} from "@/components/ui/badge";
 import {Avatar, AvatarFallback, AvatarImage} from "@/components/ui/avatar";
 import {Separator} from "@/components/ui/separator";
-import {CheckCircle, Shield, LogOut, Copy} from "lucide-react";
+import {CheckCircle, Shield, LogOut, Copy, Gift} from "lucide-react";
 import {useState} from "react";
+import {RewardsModal} from "@/components/rewards-modal";
 
 export function Account() {
   const {address, connector} = useAccount();
@@ -15,6 +16,7 @@ export function Account() {
   const {data: ensAvatar} = useEnsAvatar({name: ensName!});
   const passkeyName = usePasskeyName();
   const [copied, setCopied] = useState(false);
+  const [isRewardsModalOpen, setIsRewardsModalOpen] = useState(false);
 
   const isPasskey = connector?.name === "Passkey";
 
@@ -83,15 +85,28 @@ export function Account() {
 
         <Separator />
 
-        <Button
-          onClick={() => disconnect()}
-          variant='outline'
-          size='lg'
-          className='w-full text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300'>
-          <LogOut className='mr-2 h-4 w-4' />
-          Disconnect Wallet
-        </Button>
+        <div className='space-y-3'>
+          <Button
+            onClick={() => setIsRewardsModalOpen(true)}
+            variant='default'
+            size='lg'
+            className='w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white border-0'>
+            <Gift className='mr-2 h-4 w-4' />
+            Claim Rewards (100 Tokens)
+          </Button>
+
+          <Button
+            onClick={() => disconnect()}
+            variant='outline'
+            size='lg'
+            className='w-full text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300'>
+            <LogOut className='mr-2 h-4 w-4' />
+            Disconnect Wallet
+          </Button>
+        </div>
       </CardContent>
+
+      <RewardsModal isOpen={isRewardsModalOpen} onClose={() => setIsRewardsModalOpen(false)} />
     </>
   );
 }
