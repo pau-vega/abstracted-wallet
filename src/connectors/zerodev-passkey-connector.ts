@@ -20,7 +20,7 @@ export interface HumanWalletConnectorOptions {
 }
 
 export function createHumanWalletConnector(options: HumanWalletConnectorOptions) {
-  const {projectId, appName = "Human Wallet Passkey App", passkeyName} = options;
+  const {projectId, appName = "HumanWallet Passkey App", passkeyName} = options;
 
   // Use custom passkey name or fallback to app name with user-friendly suffix
   const displayName = passkeyName || `${appName} - Passkey`;
@@ -51,7 +51,7 @@ export function createHumanWalletConnector(options: HumanWalletConnectorOptions)
       const publicClient = createPublicClient({
         chain,
         transport: bundlerTransport || http(),
-        name: "Human Wallet",
+        name: "HumanWallet",
       });
 
       const paymasterClient = await createZeroDevPaymasterClient({
