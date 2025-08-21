@@ -1,4 +1,4 @@
-import { get } from "idb-keyval";
+import {get} from "idb-keyval";
 
 /**
  * Gets the stored passkey name for the given project ID

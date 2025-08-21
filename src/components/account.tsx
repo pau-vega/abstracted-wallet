@@ -35,11 +35,20 @@ export function Account() {
         <CardTitle className='text-2xl font-bold text-green-700'>Connected Successfully!</CardTitle>
 
         {isPasskey && (
-          <Badge variant='secondary' className='bg-blue-50 text-blue-700 border-blue-200 px-3 py-2'>
-            <Shield className='mr-2 h-4 w-4' />
-            Secured with Passkey Authentication
-            {passkeyName && <div className='mt-1 font-semibold'>Passkey: "{passkeyName}"</div>}
-          </Badge>
+          <div className='space-y-2'>
+            <Badge variant='secondary' className='bg-blue-50 text-blue-700 border-blue-200 px-3 py-2'>
+              <Shield className='mr-2 h-4 w-4' />
+              Secured with Passkey Authentication
+            </Badge>
+            {passkeyName && (
+              <div className='inline-flex items-center justify-center gap-2 text-sm text-muted-foreground bg-muted/30 rounded-md px-3 py-1.5 border'>
+                <div className='w-2 h-2 bg-blue-500 rounded-full flex-shrink-0' />
+                <span>
+                  Passkey: <span className='font-medium text-foreground'>"{passkeyName}"</span>
+                </span>
+              </div>
+            )}
+          </div>
         )}
       </CardHeader>
 
