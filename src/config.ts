@@ -4,7 +4,7 @@ import {createZeroDevPasskeyConnector} from "@/connectors/zerodev-passkey-connec
 import {createStorage} from "wagmi";
 
 // Replace with your actual ZeroDev project ID
-const ZERODEV_PROJECT_ID = "b51cdaae-10d4-4ef5-b693-4e5c6a0fbc56";
+const ZERODEV_PROJECT_ID = import.meta.env.VITE_ZERODEV_PROJECT_ID;
 
 export const config = createConfig({
   chains: [sepolia],

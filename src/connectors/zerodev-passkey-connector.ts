@@ -1,15 +1,17 @@
-import { createConnector } from "@wagmi/core";
+import {createConnector} from "@wagmi/core";
+import {toWebAuthnKey, toPasskeyValidator, PasskeyValidatorContractVersion} from "@zerodev/passkey-validator";
+import {getEntryPoint, KERNEL_V3_1} from "@zerodev/sdk/constants";
+import {UserRejectedRequestError, createPublicClient, http} from "viem";
 import {
-  toWebAuthnKey,
-  WebAuthnMode,
-  toPasskeyValidator,
-  PasskeyValidatorContractVersion,
-} from "@zerodev/passkey-validator";
-import { getEntryPoint, KERNEL_V3_1 } from "@zerodev/sdk/constants";
-import { UserRejectedRequestError, createPublicClient, http } from "viem";
-import { createKernelAccount, createKernelAccountClient } from "@zerodev/sdk";
-import { get, set, del } from "idb-keyval";
-import { promptPasskeyName } from "@/utils/passkey-name-prompt";
+  createKernelAccount,
+  createKernelAccountClient,
+  createZeroDevPaymasterClient,
+  getUserOperationGasPrice,
+} from "@zerodev/sdk";
+import {get, set, del} from "idb-keyval";
+import {promptPasskeyName} from "@/utils/passkey-name-prompt";
+import type {KernelClient, SessionKeyAccount, WebAuthenticationKey} from "@/types/human-wallet";
+import {WEB_AUTHENTICATION_MODE_KEY} from "@/types/human-wallet";
 
 export interface ZeroDevPasskeyConnectorOptions {
   projectId: string;
@@ -18,33 +20,43 @@ export interface ZeroDevPasskeyConnectorOptions {
 }
 
 export function createZeroDevPasskeyConnector(options: ZeroDevPasskeyConnectorOptions) {
-  const {projectId, appName = "ZeroDev Passkey App", passkeyName} = options;
+  const {projectId, appName = "Human Wallet Passkey App", passkeyName} = options;
 
   // Use custom passkey name or fallback to app name with user-friendly suffix
   const displayName = passkeyName || `${appName} - Passkey`;
 
   return createConnector((config) => {
-    let kernelClient: ReturnType<typeof createKernelAccountClient> | undefined;
-    let kernelAccount: Awaited<ReturnType<typeof createKernelAccount>> | undefined;
+    let kernelClient: KernelClient | undefined;
+    let kernelAccount: Awaited<SessionKeyAccount> | undefined;
+    const passkeyServerUrl = `https://passkeys.zerodev.app/api/v3/${projectId}`;
 
     // IndexedDB keys for persisting WebAuthn key data and passkey name
-    const webAuthnStorageKey = `zerodev-webauthn-${projectId}`;
-    const passkeyNameStorageKey = `zerodev-passkey-name-${projectId}`;
+    const webAuthnStorageKey = `hw-webauthn-${projectId}`;
+    const passkeyNameStorageKey = `hw-passkey-name-${projectId}`;
 
     // Shared function to create kernel account and client
     async function createKernelAccountAndClient(
-      webAuthnKey: Awaited<ReturnType<typeof toWebAuthnKey>>,
+      webAuthnKey: Awaited<WebAuthenticationKey>,
       chainId?: number
     ): Promise<{
       accounts: `0x${string}`[];
       chainId: number;
     }> {
       const chain = config.chains.find((c) => c.id === chainId) || config.chains[0];
+      const bundlerTransport = http(`https://rpc.zerodev.app/api/v3/${projectId}/chain/${chain.id}`);
+      const paymasterTransport = http(`https://rpc.zerodev.app/api/v3/${projectId}/chain/${chain.id}`);
+
       const entryPoint = getEntryPoint("0.7");
 
       const publicClient = createPublicClient({
         chain,
-        transport: http(),
+        transport: bundlerTransport || http(),
+        name: "Human Wallet",
+      });
+
+      const paymasterClient = await createZeroDevPaymasterClient({
+        chain: chain,
+        transport: paymasterTransport,
       });
 
       // Create passkey validator
@@ -68,7 +80,14 @@ export function createZeroDevPasskeyConnector(options: ZeroDevPasskeyConnectorOp
       kernelClient = createKernelAccountClient({
         account: kernelAccount,
         chain,
+        client: publicClient,
         bundlerTransport: http(`https://rpc.zerodev.app/api/v2/bundler/${projectId}`),
+        paymaster: {
+          getPaymasterData: (userOperation) => paymasterClient.sponsorUserOperation({userOperation}),
+        },
+        userOperation: {
+          estimateFeesPerGas: ({bundlerClient}) => getUserOperationGasPrice(bundlerClient),
+        },
       });
 
       return {
@@ -82,8 +101,8 @@ export function createZeroDevPasskeyConnector(options: ZeroDevPasskeyConnectorOp
         // Try to login with existing passkey first
         const webAuthnKey = await toWebAuthnKey({
           passkeyName: displayName,
-          passkeyServerUrl: `https://passkeys.zerodev.app/api/v3/${projectId}`,
-          mode: WebAuthnMode.Login,
+          passkeyServerUrl,
+          mode: WEB_AUTHENTICATION_MODE_KEY.LOGIN,
           passkeyServerHeaders: {},
         });
 
@@ -108,8 +127,8 @@ export function createZeroDevPasskeyConnector(options: ZeroDevPasskeyConnectorOp
 
           return await toWebAuthnKey({
             passkeyName: finalPasskeyName,
-            passkeyServerUrl: `https://passkeys.zerodev.app/api/v3/${projectId}`,
-            mode: WebAuthnMode.Register,
+            passkeyServerUrl,
+            mode: WEB_AUTHENTICATION_MODE_KEY.REGISTER,
             passkeyServerHeaders: {},
           });
         } catch (error) {
