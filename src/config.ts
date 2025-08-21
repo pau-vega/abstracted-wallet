@@ -1,6 +1,6 @@
 import {createConfig, http} from "wagmi";
 import {sepolia} from "wagmi/chains";
-import {createZeroDevPasskeyConnector} from "@/connectors/zerodev-passkey-connector";
+import {createHumanWalletConnector} from "@/connectors/zerodev-passkey-connector";
 import {createStorage} from "wagmi";
 
 // Replace with your actual ZeroDev project ID
@@ -9,7 +9,7 @@ const ZERODEV_PROJECT_ID = import.meta.env.VITE_ZERODEV_PROJECT_ID;
 export const config = createConfig({
   chains: [sepolia],
   connectors: [
-    createZeroDevPasskeyConnector({
+    createHumanWalletConnector({
       projectId: ZERODEV_PROJECT_ID,
       appName: "Wagmi Passkeys App",
       passkeyName: "My Wallet", // Default name (users can customize this)

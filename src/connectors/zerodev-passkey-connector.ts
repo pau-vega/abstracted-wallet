@@ -13,13 +13,13 @@ import {promptPasskeyName} from "@/utils/passkey-name-prompt";
 import type {KernelClient, SessionKeyAccount, WebAuthenticationKey} from "@/types/human-wallet";
 import {WEB_AUTHENTICATION_MODE_KEY} from "@/types/human-wallet";
 
-export interface ZeroDevPasskeyConnectorOptions {
+export interface HumanWalletConnectorOptions {
   projectId: string;
   appName?: string;
   passkeyName?: string;
 }
 
-export function createZeroDevPasskeyConnector(options: ZeroDevPasskeyConnectorOptions) {
+export function createHumanWalletConnector(options: HumanWalletConnectorOptions) {
   const {projectId, appName = "Human Wallet Passkey App", passkeyName} = options;
 
   // Use custom passkey name or fallback to app name with user-friendly suffix
@@ -142,13 +142,13 @@ export function createZeroDevPasskeyConnector(options: ZeroDevPasskeyConnectorOp
     }
 
     return {
-      id: "zerodev-passkey",
+      id: "human-wallet-passkey",
       name: "Passkey",
-      type: "zerodev-passkey" as const,
+      type: "human-wallet-passkey" as const,
 
       async setup() {
         // Setup method called when connector is first created
-        console.log("Setting up ZeroDev Passkey connector");
+        console.log("Setting up HumanWallet Passkey connector");
 
         // Try to auto-reconnect if we have stored credentials
         try {
