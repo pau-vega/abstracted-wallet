@@ -1,5 +1,12 @@
 import {useAccount, useDisconnect, useEnsAvatar, useEnsName} from "wagmi";
-import {usePasskeyName} from "../hooks/use-passkey-name";
+import {usePasskeyName} from "@/hooks/use-passkey-name";
+import {CardContent, CardHeader, CardTitle} from "@/components/ui/card";
+import {Button} from "@/components/ui/button";
+import {Badge} from "@/components/ui/badge";
+import {Avatar, AvatarFallback, AvatarImage} from "@/components/ui/avatar";
+import {Separator} from "@/components/ui/separator";
+import {CheckCircle, Shield, LogOut, Copy} from "lucide-react";
+import {useState} from "react";
 
 export function Account() {
   const {address, connector} = useAccount();
@@ -7,81 +14,75 @@ export function Account() {
   const {data: ensName} = useEnsName({address});
   const {data: ensAvatar} = useEnsAvatar({name: ensName!});
   const passkeyName = usePasskeyName();
+  const [copied, setCopied] = useState(false);
 
   const isPasskey = connector?.name === "Passkey";
 
+  const copyAddress = async () => {
+    if (address) {
+      await navigator.clipboard.writeText(address);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
   return (
-    <div style={{padding: "20px", maxWidth: "400px", margin: "0 auto"}}>
-      <div style={{marginBottom: "20px", textAlign: "center"}}>
-        <h2>🎉 Connected Successfully!</h2>
+    <>
+      <CardHeader className='text-center space-y-4'>
+        <div className='mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center'>
+          <CheckCircle className='h-8 w-8 text-green-600' />
+        </div>
+        <CardTitle className='text-2xl font-bold text-green-700'>Connected Successfully!</CardTitle>
+
         {isPasskey && (
-          <div
-            style={{
-              padding: "8px 12px",
-              backgroundColor: "#e8f5e8",
-              border: "1px solid #4CAF50",
-              borderRadius: "6px",
-              marginBottom: "16px",
-              fontSize: "14px",
-              color: "#2e7d32",
-            }}>
-            🔐 Secured with Passkey Authentication
-            {passkeyName && <div style={{marginTop: "4px", fontWeight: "600"}}>Passkey: "{passkeyName}"</div>}
+          <Badge variant='secondary' className='bg-blue-50 text-blue-700 border-blue-200 px-3 py-2'>
+            <Shield className='mr-2 h-4 w-4' />
+            Secured with Passkey Authentication
+            {passkeyName && <div className='mt-1 font-semibold'>Passkey: "{passkeyName}"</div>}
+          </Badge>
+        )}
+      </CardHeader>
+
+      <CardContent className='space-y-6'>
+        <div className='flex flex-col items-center space-y-4'>
+          {ensAvatar && (
+            <Avatar className='w-16 h-16'>
+              <AvatarImage src={ensAvatar} alt='ENS Avatar' />
+              <AvatarFallback>{ensName ? ensName.charAt(0).toUpperCase() : "?"}</AvatarFallback>
+            </Avatar>
+          )}
+
+          <div className='w-full space-y-3'>
+            <div className='bg-muted/50 rounded-lg p-4 space-y-2'>
+              <div className='flex items-center justify-between'>
+                <span className='text-sm font-medium text-muted-foreground'>Smart Account Address</span>
+                <Button variant='ghost' size='sm' onClick={copyAddress} className='h-6 w-6 p-0'>
+                  {copied ? <CheckCircle className='h-3 w-3 text-green-600' /> : <Copy className='h-3 w-3' />}
+                </Button>
+              </div>
+              <div className='font-mono text-sm break-all'>{address}</div>
+              {ensName && <div className='text-sm text-blue-600 font-medium'>ENS: {ensName}</div>}
+            </div>
+
+            {connector && (
+              <div className='text-center'>
+                <span className='text-sm text-muted-foreground'>Connected via {connector.name}</span>
+              </div>
+            )}
           </div>
-        )}
-      </div>
-
-      <div style={{marginBottom: "20px"}}>
-        {ensAvatar && (
-          <img
-            alt='ENS Avatar'
-            src={ensAvatar}
-            style={{
-              width: "64px",
-              height: "64px",
-              borderRadius: "50%",
-              display: "block",
-              margin: "0 auto 12px",
-            }}
-          />
-        )}
-
-        <div
-          style={{
-            backgroundColor: "#f8f9fa",
-            padding: "12px",
-            borderRadius: "8px",
-            border: "1px solid #e9ecef",
-            marginBottom: "12px",
-          }}>
-          <div style={{fontSize: "12px", color: "#666", marginBottom: "4px"}}>Smart Account Address:</div>
-          <div style={{fontFamily: "monospace", fontSize: "14px", wordBreak: "break-all"}}>{address}</div>
-          {ensName && <div style={{fontSize: "14px", color: "#007AFF", marginTop: "4px"}}>ENS: {ensName}</div>}
         </div>
 
-        {connector && (
-          <div style={{fontSize: "14px", color: "#666", marginBottom: "16px"}}>Connected via: {connector.name}</div>
-        )}
-      </div>
+        <Separator />
 
-      <button
-        onClick={() => disconnect()}
-        style={{
-          width: "100%",
-          padding: "12px 16px",
-          border: "1px solid #dc3545",
-          borderRadius: "8px",
-          backgroundColor: "#dc3545",
-          color: "white",
-          cursor: "pointer",
-          fontSize: "16px",
-          fontWeight: "600",
-          transition: "background-color 0.2s ease",
-        }}
-        onMouseOver={(e) => (e.currentTarget.style.backgroundColor = "#c82333")}
-        onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "#dc3545")}>
-        Disconnect
-      </button>
-    </div>
+        <Button
+          onClick={() => disconnect()}
+          variant='outline'
+          size='lg'
+          className='w-full text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300'>
+          <LogOut className='mr-2 h-4 w-4' />
+          Disconnect Wallet
+        </Button>
+      </CardContent>
+    </>
   );
 }

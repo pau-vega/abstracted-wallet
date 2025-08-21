@@ -1,16 +1,26 @@
 import React, {useState} from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {Button} from "@/components/ui/button";
+import {Input} from "@/components/ui/input";
+import {Label} from "@/components/ui/label";
+import {KeyRound} from "lucide-react";
 
 interface PasskeyNameModalProps {
-  isOpen: boolean;
-  defaultName: string;
-  onConfirm: (name: string) => void;
-  onCancel: () => void;
+  readonly isOpen: boolean;
+  readonly defaultName: string;
+  readonly onConfirm: (name: string) => void;
+  readonly onCancel: () => void;
 }
 
 export function PasskeyNameModal({isOpen, defaultName, onConfirm, onCancel}: PasskeyNameModalProps) {
   const [passkeyName, setPasskeyName] = useState(defaultName);
-
-  if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,92 +29,47 @@ export function PasskeyNameModal({isOpen, defaultName, onConfirm, onCancel}: Pas
   };
 
   return (
-    <div
-      style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: "rgba(0, 0, 0, 0.5)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 1000,
-      }}>
-      <div
-        style={{
-          backgroundColor: "white",
-          borderRadius: "12px",
-          padding: "24px",
-          maxWidth: "400px",
-          width: "90%",
-          boxShadow: "0 20px 40px rgba(0, 0, 0, 0.15)",
-        }}>
-        <h3 style={{margin: "0 0 16px 0", fontSize: "18px", fontWeight: "600"}}>🔐 Name Your Passkey</h3>
-        <p style={{margin: "0 0 20px 0", color: "#666", fontSize: "14px", lineHeight: "1.5"}}>
-          Choose a name to help you identify this passkey in your password manager and devices.
-        </p>
-
-        <form onSubmit={handleSubmit}>
-          <input
-            type='text'
-            value={passkeyName}
-            onChange={(e) => setPasskeyName(e.target.value)}
-            placeholder='My Secure Wallet'
-            autoFocus
-            style={{
-              width: "100%",
-              padding: "12px",
-              border: "2px solid #e1e5e9",
-              borderRadius: "8px",
-              fontSize: "16px",
-              marginBottom: "20px",
-              boxSizing: "border-box",
-              outline: "none",
-              transition: "border-color 0.2s",
-            }}
-            onFocus={(e) => {
-              e.target.style.borderColor = "#007bff";
-            }}
-            onBlur={(e) => {
-              e.target.style.borderColor = "#e1e5e9";
-            }}
-          />
-
-          <div style={{display: "flex", gap: "12px", justifyContent: "flex-end"}}>
-            <button
-              type='button'
-              onClick={onCancel}
-              style={{
-                padding: "10px 20px",
-                border: "2px solid #e1e5e9",
-                borderRadius: "6px",
-                backgroundColor: "white",
-                color: "#666",
-                cursor: "pointer",
-                fontSize: "14px",
-                fontWeight: "500",
-              }}>
-              Cancel
-            </button>
-            <button
-              type='submit'
-              style={{
-                padding: "10px 20px",
-                border: "none",
-                borderRadius: "6px",
-                backgroundColor: "#007bff",
-                color: "white",
-                cursor: "pointer",
-                fontSize: "14px",
-                fontWeight: "500",
-              }}>
-              Create Passkey
-            </button>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onCancel()}>
+      <DialogContent className='sm:max-w-[425px]'>
+        <DialogHeader className='text-center space-y-2'>
+          <div className='mx-auto w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-2'>
+            <KeyRound className='h-6 w-6 text-blue-600' />
           </div>
+          <DialogTitle className='text-xl font-bold'>Name Your Passkey</DialogTitle>
+          <DialogDescription className='text-muted-foreground'>
+            Choose a name to help you identify this passkey in your password manager and devices.
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className='space-y-4'>
+          <div className='space-y-2'>
+            <Label htmlFor='passkey-name' className='text-sm font-medium'>
+              Passkey Name
+            </Label>
+            <Input
+              id='passkey-name'
+              type='text'
+              value={passkeyName}
+              onChange={(e) => setPasskeyName(e.target.value)}
+              placeholder='My Secure Wallet'
+              autoFocus
+              className='w-full'
+            />
+          </div>
+
+          <DialogFooter className='gap-2 sm:gap-0'>
+            <Button type='button' variant='outline' onClick={onCancel}>
+              Cancel
+            </Button>
+            <Button
+              type='submit'
+              className='bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700'>
+              <KeyRound className='mr-2 h-4 w-4' />
+              Create Passkey
+            </Button>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
