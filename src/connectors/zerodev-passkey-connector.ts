@@ -1,15 +1,15 @@
-import {createConnector} from "@wagmi/core";
+import { createConnector } from "@wagmi/core";
 import {
   toWebAuthnKey,
   WebAuthnMode,
   toPasskeyValidator,
   PasskeyValidatorContractVersion,
 } from "@zerodev/passkey-validator";
-import {getEntryPoint, KERNEL_V3_1} from "@zerodev/sdk/constants";
-import {UserRejectedRequestError, createPublicClient, http} from "viem";
-import {createKernelAccount, createKernelAccountClient} from "@zerodev/sdk";
-import {get, set, del} from "idb-keyval";
-import {promptPasskeyName} from "../utils/passkey-name-prompt";
+import { getEntryPoint, KERNEL_V3_1 } from "@zerodev/sdk/constants";
+import { UserRejectedRequestError, createPublicClient, http } from "viem";
+import { createKernelAccount, createKernelAccountClient } from "@zerodev/sdk";
+import { get, set, del } from "idb-keyval";
+import { promptPasskeyName } from "@/utils/passkey-name-prompt";
 
 export interface ZeroDevPasskeyConnectorOptions {
   projectId: string;
@@ -80,12 +80,22 @@ export function createZeroDevPasskeyConnector(options: ZeroDevPasskeyConnectorOp
     async function createPasskeyOwner() {
       try {
         // Try to login with existing passkey first
-        return await toWebAuthnKey({
+        const webAuthnKey = await toWebAuthnKey({
           passkeyName: displayName,
           passkeyServerUrl: `https://passkeys.zerodev.app/api/v3/${projectId}`,
           mode: WebAuthnMode.Login,
           passkeyServerHeaders: {},
         });
+
+        // If login is successful, ensure we have a stored passkey name
+        const existingName = await get(passkeyNameStorageKey);
+        if (!existingName) {
+          // Store the default name if no custom name was previously set
+          await set(passkeyNameStorageKey, displayName);
+          console.log("Stored default passkey name for existing passkey:", displayName);
+        }
+
+        return webAuthnKey;
       } catch {
         // If login fails, try to register a new passkey
         try {
@@ -94,6 +104,7 @@ export function createZeroDevPasskeyConnector(options: ZeroDevPasskeyConnectorOp
 
           // Store the passkey name for later display
           await set(passkeyNameStorageKey, finalPasskeyName);
+          console.log("Stored custom passkey name for new passkey:", finalPasskeyName);
 
           return await toWebAuthnKey({
             passkeyName: finalPasskeyName,

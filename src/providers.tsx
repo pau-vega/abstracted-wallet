@@ -1,8 +1,12 @@
-import {QueryClient, QueryClientProvider} from "@tanstack/react-query";
-import {WagmiProvider} from "wagmi";
-import {config} from "./config.ts";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { WagmiProvider } from "wagmi";
+import { config } from "@/config";
 
-function Providers({children}: {children: React.ReactNode}) {
+interface ProvidersProps {
+  readonly children: React.ReactNode;
+}
+
+export function Providers({ children }: ProvidersProps) {
   const queryClient = new QueryClient();
 
   return (
@@ -11,5 +15,3 @@ function Providers({children}: {children: React.ReactNode}) {
     </WagmiProvider>
   );
 }
-
-export default Providers;
