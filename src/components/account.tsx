@@ -9,6 +9,7 @@ import { CheckCircle, Shield, LogOut, Copy, Gift, TestTube } from "lucide-react"
 import { useState } from "react";
 import { RewardsModal } from "@/components/rewards-modal";
 import { SimpleTestModal } from "@/components/simple-test-modal";
+import { TokenBalances } from "@/components/token-balances";
 
 export function Account() {
   const { address, connector } = useAccount();
@@ -83,6 +84,13 @@ export function Account() {
               </div>
             )}
           </div>
+        </div>
+
+        <Separator />
+
+        {/* Token Balances Section */}
+        <div className="space-y-4">
+          <TokenBalances />
         </div>
 
         <Separator />
