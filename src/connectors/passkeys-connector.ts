@@ -1,17 +1,17 @@
-import {createConnector} from "@wagmi/core";
-import {toWebAuthnKey, toPasskeyValidator, PasskeyValidatorContractVersion} from "@zerodev/passkey-validator";
-import {getEntryPoint, KERNEL_V3_1} from "@zerodev/sdk/constants";
-import type {TransactionRequest, EIP1193Parameters, WalletRpcSchema} from "viem";
-import {UserRejectedRequestError, createPublicClient, http} from "viem";
+import { createConnector } from "@wagmi/core";
+import { toWebAuthnKey, toPasskeyValidator, PasskeyValidatorContractVersion } from "@zerodev/passkey-validator";
+import { getEntryPoint, KERNEL_V3_1 } from "@zerodev/sdk/constants";
+import type { TransactionRequest, EIP1193Parameters, WalletRpcSchema } from "viem";
+import { UserRejectedRequestError, createPublicClient, http } from "viem";
 import {
   createKernelAccount,
   createKernelAccountClient,
   createZeroDevPaymasterClient,
   getUserOperationGasPrice,
 } from "@zerodev/sdk";
-import {get, set, del} from "idb-keyval";
-import type {KernelClient, SessionKeyAccount, WebAuthenticationKey} from "../types/passkeys-connector";
-import {WEB_AUTHENTICATION_MODE_KEY} from "../types/passkeys-connector";
+import { get, set, del } from "idb-keyval";
+import type { KernelClient, SessionKeyAccount, WebAuthenticationKey } from "../types/passkeys-connector";
+import { WEB_AUTHENTICATION_MODE_KEY } from "../types/passkeys-connector";
 
 export interface PasskeysConnectorOptions {
   projectId: string;
@@ -20,7 +20,7 @@ export interface PasskeysConnectorOptions {
 }
 
 export function passkeysWalletConnector(options: PasskeysConnectorOptions) {
-  const {projectId, appName = "Passkeys App", passkeyName} = options;
+  const { projectId, appName = "Passkeys App", passkeyName } = options;
 
   const displayName = passkeyName || `${appName} - Passkey`;
 
@@ -60,7 +60,7 @@ export function passkeysWalletConnector(options: PasskeysConnectorOptions) {
       kernelAccount = await createKernelAccount(publicClient, {
         entryPoint,
         kernelVersion: KERNEL_V3_1,
-        plugins: {sudo: passkeyValidator},
+        plugins: { sudo: passkeyValidator },
       });
 
       kernelClient = createKernelAccountClient({
@@ -72,7 +72,7 @@ export function passkeysWalletConnector(options: PasskeysConnectorOptions) {
           getPaymasterData: async (userOperation) => {
             try {
               console.log("Sponsoring user operation:", userOperation);
-              const sponsorResult = await paymasterClient.sponsorUserOperation({userOperation});
+              const sponsorResult = await paymasterClient.sponsorUserOperation({ userOperation });
               console.log("Sponsor result:", sponsorResult);
               return sponsorResult;
             } catch (error) {
@@ -82,7 +82,7 @@ export function passkeysWalletConnector(options: PasskeysConnectorOptions) {
           },
         },
         userOperation: {
-          estimateFeesPerGas: ({bundlerClient}) => getUserOperationGasPrice(bundlerClient),
+          estimateFeesPerGas: ({ bundlerClient }) => getUserOperationGasPrice(bundlerClient),
         },
       });
 
@@ -144,7 +144,7 @@ export function passkeysWalletConnector(options: PasskeysConnectorOptions) {
         }
       },
 
-      async connect({chainId} = {}) {
+      async connect({ chainId } = {}) {
         if (kernelClient && kernelAccount) {
           const chain = config.chains.find((c) => c.id === chainId) || config.chains[0];
           return {
@@ -202,7 +202,7 @@ export function passkeysWalletConnector(options: PasskeysConnectorOptions) {
 
         return {
           request: async (args: EIP1193Parameters<WalletRpcSchema>) => {
-            const {method, params} = args;
+            const { method, params } = args;
             switch (method) {
               case "eth_sendTransaction": {
                 if (!kernelClient?.account || !kernelAccount)
@@ -223,9 +223,9 @@ export function passkeysWalletConnector(options: PasskeysConnectorOptions) {
                   },
                 ]);
                 // Send as user operation
-                const userOpHash = await kernelClient.sendUserOperation({callData});
+                const userOpHash = await kernelClient.sendUserOperation({ callData });
                 // Wait for bundler → actual tx
-                const receipt = await kernelClient.waitForUserOperationReceipt({hash: userOpHash});
+                const receipt = await kernelClient.waitForUserOperationReceipt({ hash: userOpHash });
 
                 return receipt.receipt.transactionHash;
               }
@@ -240,7 +240,7 @@ export function passkeysWalletConnector(options: PasskeysConnectorOptions) {
         return !!storedWebAuthnKey;
       },
 
-      async switchChain({chainId}) {
+      async switchChain({ chainId }) {
         const chain = config.chains.find((c) => c.id === chainId);
         if (!chain) {
           throw new Error(`Chain ${chainId} not supported`);
@@ -252,7 +252,7 @@ export function passkeysWalletConnector(options: PasskeysConnectorOptions) {
         const storedWebAuthnKey = await get(webAuthnStorageKey);
         if (!storedWebAuthnKey) throw new Error("No stored WebAuthn key");
         await createKernelAccountAndClient(storedWebAuthnKey, chainId);
-        config.emitter.emit("change", {chainId});
+        config.emitter.emit("change", { chainId });
         return chain;
       },
 
@@ -260,12 +260,12 @@ export function passkeysWalletConnector(options: PasskeysConnectorOptions) {
         if (accounts.length === 0) {
           config.emitter.emit("disconnect");
         } else {
-          config.emitter.emit("change", {accounts: accounts as `0x${string}`[]});
+          config.emitter.emit("change", { accounts: accounts as `0x${string}`[] });
         }
       },
 
       onChainChanged(chainId) {
-        config.emitter.emit("change", {chainId: Number(chainId)});
+        config.emitter.emit("change", { chainId: Number(chainId) });
       },
 
       onDisconnect() {

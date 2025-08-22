@@ -1,7 +1,7 @@
-import {createConfig, http} from "wagmi";
-import {sepolia} from "wagmi/chains";
-import {passkeysWalletConnector} from "@/connectors/passkeys-connector";
-import {createStorage} from "wagmi";
+import { createConfig, http } from "wagmi";
+import { sepolia } from "wagmi/chains";
+import { passkeysWalletConnector } from "@/connectors/passkeys-connector";
+import { createStorage } from "wagmi";
 
 // Replace with your actual ZeroDev project ID
 const ZERODEV_PROJECT_ID = import.meta.env.VITE_ZERODEV_PROJECT_ID;

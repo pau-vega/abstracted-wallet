@@ -1,5 +1,5 @@
-import type {createKernelAccountClient, CreateKernelAccountReturnType, ZeroDevPaymasterClient} from "@zerodev/sdk";
-import {WebAuthnMode, type WebAuthnKey} from "@zerodev/webauthn-key";
+import type { createKernelAccountClient, CreateKernelAccountReturnType, ZeroDevPaymasterClient } from "@zerodev/sdk";
+import { WebAuthnMode, type WebAuthnKey } from "@zerodev/webauthn-key";
 
 export type PaymasterClient = ZeroDevPaymasterClient;
 

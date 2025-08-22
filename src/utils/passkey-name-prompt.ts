@@ -1,6 +1,6 @@
-import {createRoot} from "react-dom/client";
-import {PasskeyNameModal} from "@/components/passkey-name-modal";
-import {createElement} from "react";
+import { createRoot } from "react-dom/client";
+import { PasskeyNameModal } from "@/components/passkey-name-modal";
+import { createElement } from "react";
 
 /**
  * Shows a modal dialog to prompt user for passkey name
@@ -37,7 +37,7 @@ export function promptPasskeyName(defaultName: string): Promise<string> {
         defaultName,
         onConfirm: handleConfirm,
         onCancel: handleCancel,
-      })
+      }),
     );
   });
 }
