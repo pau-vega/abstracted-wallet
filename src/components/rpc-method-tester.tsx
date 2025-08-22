@@ -641,13 +641,21 @@ export const RpcMethodTester = () => {
           <TabsContent value="wallet" className="space-y-6">
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <Button onClick={testConnectionMethods} variant="outline" className="h-14 flex flex-col gap-1">
-                  <span className="font-medium">Connection Methods</span>
-                  <span className="text-xs opacity-70">Test wallet connection info</span>
+                <Button 
+                  onClick={testConnectionMethods} 
+                  variant="outline" 
+                  className="h-16 p-4 flex flex-col items-center justify-center gap-1 text-center"
+                >
+                  <span className="font-medium text-sm">Connection Methods</span>
+                  <span className="text-xs text-muted-foreground">Test wallet connection info</span>
                 </Button>
-                <Button onClick={testReadMethods} variant="outline" className="h-14 flex flex-col gap-1">
-                  <span className="font-medium">Read Methods</span>
-                  <span className="text-xs opacity-70">Test balance and contract reads</span>
+                <Button 
+                  onClick={testReadMethods} 
+                  variant="outline" 
+                  className="h-16 p-4 flex flex-col items-center justify-center gap-1 text-center"
+                >
+                  <span className="font-medium text-sm">Read Methods</span>
+                  <span className="text-xs text-muted-foreground">Test balance and contract reads</span>
                 </Button>
               </div>
 
