@@ -415,7 +415,7 @@ export const RpcMethodTesterModal = ({ isOpen, onClose }: RpcMethodTesterModalPr
               </DialogTitle>
               <p className="text-sm text-muted-foreground">Test blockchain RPC methods with your connected wallet</p>
             </div>
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2 mr-8">
               <Badge variant="outline" className="text-xs">
                 <div className="w-2 h-2 bg-green-500 rounded-full mr-2" />
                 {address?.slice(0, 6)}...{address?.slice(-4)}
