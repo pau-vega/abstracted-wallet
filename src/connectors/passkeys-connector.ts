@@ -3,12 +3,7 @@ import { toWebAuthnKey, toPasskeyValidator, PasskeyValidatorContractVersion } fr
 import { getEntryPoint, KERNEL_V3_1 } from "@zerodev/sdk/constants";
 import type { TransactionRequest, EIP1193Parameters, WalletRpcSchema } from "viem";
 import { UserRejectedRequestError, createPublicClient, http } from "viem";
-import {
-  createKernelAccount,
-  createKernelAccountClient,
-  createZeroDevPaymasterClient,
-  getUserOperationGasPrice,
-} from "@zerodev/sdk";
+import { createKernelAccount, createKernelAccountClient, getUserOperationGasPrice } from "@zerodev/sdk";
 import { get, set, del } from "idb-keyval";
 import type { KernelClient, SessionKeyAccount, WebAuthenticationKey } from "../types/passkeys-connector";
 import { WEB_AUTHENTICATION_MODE_KEY } from "../types/passkeys-connector";
@@ -35,17 +30,11 @@ export function passkeysWalletConnector(options: PasskeysConnectorOptions) {
     async function createKernelAccountAndClient(webAuthnKey: Awaited<WebAuthenticationKey>, chainId?: number) {
       const chain = config.chains.find((c) => c.id === chainId) || config.chains[0];
       const bundlerTransport = http(`https://rpc.zerodev.app/api/v3/${projectId}/chain/${chain.id}`);
-      const paymasterTransport = http(`https://rpc.zerodev.app/api/v3/${projectId}/chain/${chain.id}`);
 
       const publicClient = createPublicClient({
         chain,
         transport: bundlerTransport,
         name: "Passkeys",
-      });
-
-      const paymasterClient = await createZeroDevPaymasterClient({
-        chain,
-        transport: paymasterTransport,
       });
 
       const entryPoint = getEntryPoint("0.7");
@@ -68,19 +57,6 @@ export function passkeysWalletConnector(options: PasskeysConnectorOptions) {
         chain,
         client: publicClient,
         bundlerTransport,
-        paymaster: {
-          getPaymasterData: async (userOperation) => {
-            try {
-              console.log("Sponsoring user operation:", userOperation);
-              const sponsorResult = await paymasterClient.sponsorUserOperation({ userOperation });
-              console.log("Sponsor result:", sponsorResult);
-              return sponsorResult;
-            } catch (error) {
-              console.error("Paymaster sponsorship failed:", error);
-              throw error;
-            }
-          },
-        },
         userOperation: {
           estimateFeesPerGas: ({ bundlerClient }) => getUserOperationGasPrice(bundlerClient),
         },

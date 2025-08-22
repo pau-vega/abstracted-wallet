@@ -27,7 +27,7 @@ const NETWORK_TOKENS = {
     // Add more Sepolia tokens here
   ],
   [polygonAmoy.id]: [
-    "0xb23a245be0517938aed10a95cc8d7300a7d93db1", // Token on Polygon Amoy
+    "0x783904e158200811A97A73FD58DcE024c44e125B", // Token on Polygon Amoy
     // TODO: Add more token contract addresses for Polygon Amoy testnet
     // You can either:
     // 1. Deploy your own FUSDT contract on Polygon Amoy

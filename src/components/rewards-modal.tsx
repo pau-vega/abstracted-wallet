@@ -15,7 +15,7 @@ interface RewardsModalProps {
 // Network-specific token contract addresses
 const NETWORK_TOKEN_CONTRACTS = {
   [sepolia.id]: "0x118f6c0090ffd227cbefe1c6d8a803198c4422f0" as const, // FUSDT on Sepolia
-  [polygonAmoy.id]: "0xb23a245be0517938aed10a95cc8d7300a7d93db1" as const, // Token on Polygon Amoy
+  [polygonAmoy.id]: "0x783904e158200811A97A73FD58DcE024c44e125B" as const, // Token on Polygon Amoy
 } as const;
 
 export function RewardsModal({ isOpen, onClose }: RewardsModalProps) {
@@ -135,7 +135,8 @@ export function RewardsModal({ isOpen, onClose }: RewardsModalProps) {
       return {
         icon: <AlertCircle className="h-8 w-8 text-amber-500" />,
         title: "Rewards Not Available",
-        description: "Token rewards are not available on this network. Switch to Sepolia or Polygon Amoy to claim tokens.",
+        description:
+          "Token rewards are not available on this network. Switch to Sepolia or Polygon Amoy to claim tokens.",
         buttonText: "Switch to Sepolia",
         buttonVariant: "secondary" as const,
         onButtonClick: () => {}, // Could add chain switch functionality here

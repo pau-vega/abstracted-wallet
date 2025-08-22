@@ -8,7 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Coins, RefreshCw, TrendingUp, AlertCircle, Wallet, ExternalLink } from "lucide-react";
 import { useState } from "react";
 import { useChainId } from "wagmi";
-import { sepolia } from "wagmi/chains";
+import { holesky, sepolia } from "wagmi/chains";
 
 interface TokenBalanceItemProps {
   readonly token: TokenBalance;
@@ -23,8 +23,8 @@ const getExplorerUrl = (chainId: number, address: string, isEth: boolean = false
     switch (chainId) {
       case sepolia.id:
         return "https://sepolia.etherscan.io";
-      case 1: // Mainnet
-        return "https://etherscan.io";
+      case holesky.id:
+        return "https://holesky.etherscan.io";
       default:
         return "https://sepolia.etherscan.io"; // Fallback to Sepolia
     }

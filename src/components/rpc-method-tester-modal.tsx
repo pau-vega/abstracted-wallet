@@ -21,7 +21,18 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Copy, PlayCircle, CheckCircle, XCircle, AlertCircle, Loader2, Wallet, Info, Send, ExternalLink } from "lucide-react";
+import {
+  Copy,
+  PlayCircle,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Loader2,
+  Wallet,
+  Info,
+  Send,
+  ExternalLink,
+} from "lucide-react";
 import { erc20Abi, encodeFunctionData, parseUnits } from "viem";
 import { sepolia, polygonAmoy } from "wagmi/chains";
 
@@ -134,9 +145,7 @@ export const RpcMethodTesterModal = ({ isOpen, onClose }: RpcMethodTesterModalPr
   };
 
   const getExplorerUrl = (type: "tx" | "address" | "token", value: string): string => {
-    const baseUrl = chainId === polygonAmoy.id 
-      ? "https://amoy.polygonscan.com" 
-      : "https://sepolia.etherscan.io";
+    const baseUrl = chainId === polygonAmoy.id ? "https://amoy.polygonscan.com" : "https://sepolia.etherscan.io";
     switch (type) {
       case "tx":
         return `${baseUrl}/tx/${value}`;
@@ -153,7 +162,9 @@ export const RpcMethodTesterModal = ({ isOpen, onClose }: RpcMethodTesterModalPr
     window.open(getExplorerUrl(type, value), "_blank", "noopener,noreferrer");
   };
 
-  const getExplorableData = (result: TestResult): Array<{ type: "tx" | "address" | "token"; value: string; label: string }> => {
+  const getExplorableData = (
+    result: TestResult,
+  ): Array<{ type: "tx" | "address" | "token"; value: string; label: string }> => {
     const explorableItems: Array<{ type: "tx" | "address" | "token"; value: string; label: string }> = [];
 
     if (result.result && typeof result.result === "object") {
@@ -345,11 +356,11 @@ export const RpcMethodTesterModal = ({ isOpen, onClose }: RpcMethodTesterModalPr
       // Switch to the other network (if on Sepolia, switch to Polygon Amoy, and vice versa)
       const targetChain = chainId === sepolia.id ? polygonAmoy : sepolia;
       await switchChain({ chainId: targetChain.id });
-      addTestResult("wallet_switchEthereumChain", "success", { 
-        chainId: targetChain.id, 
+      addTestResult("wallet_switchEthereumChain", "success", {
+        chainId: targetChain.id,
         chainName: targetChain.name,
         from: currentChain?.name,
-        to: targetChain.name
+        to: targetChain.name,
       });
     } catch (error) {
       addTestResult(
