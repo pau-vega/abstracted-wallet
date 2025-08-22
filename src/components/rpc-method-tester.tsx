@@ -8,6 +8,8 @@ import {
   useWaitForTransactionReceipt,
   useBalance,
   useReadContract,
+  useChainId,
+  useConfig,
 } from "wagmi";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,7 +21,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Copy, PlayCircle, CheckCircle, XCircle, AlertCircle, Loader2 } from "lucide-react";
-import { parseEther, erc20Abi, encodeFunctionData, parseUnits } from "viem";
+import { erc20Abi, encodeFunctionData, parseUnits } from "viem";
 import { sepolia } from "wagmi/chains";
 
 interface TestResult {
@@ -33,6 +35,8 @@ interface TestResult {
 export const RpcMethodTester = () => {
   const { address, isConnected, connector } = useAccount();
   const { switchChain, isPending: isSwitchingChain } = useSwitchChain();
+  const chainId = useChainId();
+  const config = useConfig();
 
   // Test states
   const [testResults, setTestResults] = useState<TestResult[]>([]);
@@ -43,6 +47,10 @@ export const RpcMethodTester = () => {
   const [fusdtAddress] = useState("0x118f6c0090ffd227cbefe1c6d8a803198c4422f0"); // FUSDT (Rewards token) on Sepolia
   const [erc20Address, setErc20Address] = useState("0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238"); // USDC on Sepolia
 
+  // Get ETH decimals from the current chain configuration
+  const currentChain = config.chains.find((chain) => chain.id === chainId);
+  const ethDecimals = currentChain?.nativeCurrency.decimals ?? 18; // Fallback to 18 if chain not found
+
   // Hooks for different operations
   const { signMessage, isPending: isSigningMessage } = useSignMessage();
   const { signTypedData, isPending: isSigningTypedData } = useSignTypedData();
@@ -51,17 +59,31 @@ export const RpcMethodTester = () => {
 
   // Read operations
   const { data: ethBalance } = useBalance({ address });
+
+  // FUSDT token data
   const { data: fusdtBalance } = useReadContract({
     address: fusdtAddress as `0x${string}`,
     abi: erc20Abi,
     functionName: "balanceOf",
     args: address ? [address] : undefined,
   });
+  const { data: fusdtDecimals } = useReadContract({
+    address: fusdtAddress as `0x${string}`,
+    abi: erc20Abi,
+    functionName: "decimals",
+  });
+
+  // Generic ERC20 token data
   const { data: erc20Balance } = useReadContract({
     address: erc20Address as `0x${string}`,
     abi: erc20Abi,
     functionName: "balanceOf",
     args: address ? [address] : undefined,
+  });
+  const { data: erc20Decimals } = useReadContract({
+    address: erc20Address as `0x${string}`,
+    abi: erc20Abi,
+    functionName: "decimals",
   });
 
   const addTestResult = (method: string, status: TestResult["status"], result?: unknown, error?: string): void => {
@@ -96,6 +118,28 @@ export const RpcMethodTester = () => {
     } catch (err) {
       console.error("Failed to copy:", err);
     }
+  };
+
+  /**
+   * Parse amount string to BigInt with correct decimals for the token type
+   */
+  const parseTokenAmount = (amount: string, tokenType: "eth" | "fusdt"): bigint => {
+    if (tokenType === "eth") {
+      return parseUnits(amount, ethDecimals);
+    } else if (tokenType === "fusdt") {
+      const decimals = fusdtDecimals ?? 18; // Fallback to 18 if not loaded yet
+      return parseUnits(amount, decimals);
+    }
+    return parseUnits(amount, 18); // Default fallback
+  };
+
+  /**
+   * Format token balance from raw BigInt to human-readable string
+   */
+  const formatTokenBalance = (balance: bigint, decimals: number, symbol: string): string => {
+    const divisor = 10 ** decimals;
+    const formatted = (Number(balance) / divisor).toFixed(6);
+    return `${formatted} ${symbol}`;
   };
 
   // Helper function to serialize objects with BigInt values
@@ -167,9 +211,10 @@ export const RpcMethodTester = () => {
 
       if (testType === "eth") {
         // Send ETH
-        const value = parseEther(testAmount);
+        const value = parseTokenAmount(testAmount, "eth");
+        console.log("value", value);
         sendTransaction(
-          { to: to as `0x${string}`, value, data: "0x" },
+          { to: to as `0x${string}`, value },
           {
             onSuccess: (hash) => {
               addTestResult("eth_sendTransaction", "success", {
@@ -186,7 +231,7 @@ export const RpcMethodTester = () => {
         );
       } else {
         // Send FUSDT (ERC20 transfer)
-        const amount = parseUnits(testAmount, 18); // FUSDT has 18 decimals
+        const amount = parseTokenAmount(testAmount, "fusdt");
         const data = encodeFunctionData({
           abi: erc20Abi,
           functionName: "transfer",
@@ -268,25 +313,30 @@ export const RpcMethodTester = () => {
           address,
           balance: ethBalance.formatted,
           wei: ethBalance.value.toString(),
+          decimals: ethDecimals,
+          symbol: currentChain?.nativeCurrency.symbol ?? "ETH",
         });
       }
 
       // Test FUSDT balance
-      if (fusdtBalance) {
+      if (fusdtBalance && fusdtDecimals !== undefined) {
         addTestResult("eth_call", "success", {
           contract: fusdtAddress,
           method: "balanceOf (FUSDT)",
           result: fusdtBalance.toString(),
-          formatted: (Number(fusdtBalance) / 10 ** 18).toFixed(6) + " FUSDT",
+          formatted: formatTokenBalance(fusdtBalance, fusdtDecimals, "FUSDT"),
+          decimals: fusdtDecimals,
         });
       }
 
       // Test ERC20 balance
-      if (erc20Balance) {
+      if (erc20Balance && erc20Decimals !== undefined) {
         addTestResult("eth_call", "success", {
           contract: erc20Address,
-          method: "balanceOf",
+          method: "balanceOf (ERC20)",
           result: erc20Balance.toString(),
+          formatted: formatTokenBalance(erc20Balance, erc20Decimals, "ERC20"),
+          decimals: erc20Decimals,
         });
       }
 
@@ -393,7 +443,12 @@ export const RpcMethodTester = () => {
                 <div className="text-sm font-medium">Current Balances:</div>
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div>ETH: {ethBalance?.formatted.slice(0, 8) || "0"}</div>
-                  <div>FUSDT: {fusdtBalance ? (Number(fusdtBalance) / 10 ** 18).toFixed(2) : "0"}</div>
+                  <div>
+                    FUSDT:{" "}
+                    {fusdtBalance && fusdtDecimals !== undefined
+                      ? formatTokenBalance(fusdtBalance, fusdtDecimals, "").replace(" ", "").slice(0, 8)
+                      : "0"}
+                  </div>
                 </div>
               </div>
 
