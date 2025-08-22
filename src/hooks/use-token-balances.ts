@@ -1,7 +1,6 @@
 import { useAccount, useBalance, useReadContracts } from "wagmi";
 import { erc20Abi, formatUnits } from "viem";
 import { sepolia } from "wagmi/chains";
-import { useEffect, useState } from "react";
 
 // Popular tokens available on Sepolia (treating it as our main network)
 export const SEPOLIA_TOKENS = [
@@ -111,6 +110,29 @@ export const useTokenBalances = (): UseTokenBalancesReturn => {
     chainId: sepolia.id,
   }));
 
+  // Prepare contracts to fetch metadata for the rewards token (to get real name/symbol)
+  const rewardsTokenAddress = "0x118f6c0090ffd227cbefe1c6d8a803198c4422f0" as const;
+  const rewardsTokenMetadataContracts = [
+    {
+      address: rewardsTokenAddress,
+      abi: erc20Abi,
+      functionName: "name" as const,
+      chainId: sepolia.id,
+    },
+    {
+      address: rewardsTokenAddress,
+      abi: erc20Abi,
+      functionName: "symbol" as const,
+      chainId: sepolia.id,
+    },
+    {
+      address: rewardsTokenAddress,
+      abi: erc20Abi,
+      functionName: "decimals" as const,
+      chainId: sepolia.id,
+    },
+  ];
+
   // Fetch all token balances in parallel
   const {
     data: tokenBalancesData,
@@ -124,6 +146,18 @@ export const useTokenBalances = (): UseTokenBalancesReturn => {
     },
   });
 
+  // Fetch rewards token metadata
+  const {
+    data: rewardsTokenMetadata,
+    isLoading: metadataLoading,
+    refetch: refetchMetadata,
+  } = useReadContracts({
+    contracts: rewardsTokenMetadataContracts,
+    query: {
+      enabled: !!address,
+    },
+  });
+
   // Process ETH balance
   const ethBalance = {
     balance: ethBalanceData?.value ?? 0n,
@@ -132,20 +166,37 @@ export const useTokenBalances = (): UseTokenBalancesReturn => {
     error: ethError,
   };
 
+  // Extract real rewards token metadata
+  const rewardsTokenName = rewardsTokenMetadata?.[0]?.status === "success" 
+    ? (rewardsTokenMetadata[0].result as string) 
+    : "Reward Token";
+  const rewardsTokenSymbol = rewardsTokenMetadata?.[1]?.status === "success" 
+    ? (rewardsTokenMetadata[1].result as string) 
+    : "RWT";
+  const rewardsTokenDecimals = rewardsTokenMetadata?.[2]?.status === "success" 
+    ? (rewardsTokenMetadata[2].result as number) 
+    : 18;
+
   // Process token balances
   const tokenBalances: TokenBalance[] = SEPOLIA_TOKENS.map((token, index) => {
     const result = tokenBalancesData?.[index];
     const balance = result?.status === "success" ? (result.result as bigint) : 0n;
     const error = result?.status === "failure" ? (result.error as Error) : null;
 
+    // Use real metadata for rewards token
+    const isRewardsToken = token.address === rewardsTokenAddress;
+    const tokenSymbol = isRewardsToken ? rewardsTokenSymbol : token.symbol;
+    const tokenName = isRewardsToken ? rewardsTokenName : token.name;
+    const tokenDecimals = isRewardsToken ? rewardsTokenDecimals : token.decimals;
+
     return {
       address: token.address,
-      symbol: token.symbol,
-      name: token.name,
-      decimals: token.decimals,
+      symbol: tokenSymbol,
+      name: tokenName,
+      decimals: tokenDecimals,
       balance,
-      formattedBalance: formatUnits(balance, token.decimals),
-      isLoading: tokensLoading,
+      formattedBalance: formatUnits(balance, tokenDecimals),
+      isLoading: tokensLoading || (isRewardsToken && metadataLoading),
       error,
     };
   });
@@ -153,12 +204,13 @@ export const useTokenBalances = (): UseTokenBalancesReturn => {
   const refetch = (): void => {
     refetchEth();
     refetchTokens();
+    refetchMetadata();
   };
 
   return {
     ethBalance,
     tokenBalances,
-    isLoading: ethLoading || tokensLoading,
+    isLoading: ethLoading || tokensLoading || metadataLoading,
     hasError: !!ethError || !!tokensError || tokenBalances.some(token => token.error),
     refetch,
   };
