@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
-import { getTokenInfo } from "@/utils/get-token-info";
+import { useReadContracts } from "wagmi";
+import { erc20Abi } from "viem";
+import { sepolia } from "wagmi/chains";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,35 +8,46 @@ import { ExternalLink, Search } from "lucide-react";
 
 const REWARDS_TOKEN_ADDRESS = "0x118f6c0090ffd227cbefe1c6d8a803198c4422f0" as const;
 
-interface TokenInfo {
-  name: string;
-  symbol: string;
-  decimals: number;
-  address: `0x${string}`;
-}
+export const TokenInspector = () => {
+  // Use wagmi hook to fetch token metadata
+  const {
+    data: tokenMetadata,
+    isLoading,
+    error,
+    refetch,
+  } = useReadContracts({
+    contracts: [
+      {
+        address: REWARDS_TOKEN_ADDRESS,
+        abi: erc20Abi,
+        functionName: "name",
+        chainId: sepolia.id,
+      },
+      {
+        address: REWARDS_TOKEN_ADDRESS,
+        abi: erc20Abi,
+        functionName: "symbol",
+        chainId: sepolia.id,
+      },
+      {
+        address: REWARDS_TOKEN_ADDRESS,
+        abi: erc20Abi,
+        functionName: "decimals",
+        chainId: sepolia.id,
+      },
+    ],
+  });
 
-export const TokenInspector = (): JSX.Element => {
-  const [tokenInfo, setTokenInfo] = useState<TokenInfo | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchTokenInfo = async (): Promise<void> => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const info = await getTokenInfo(REWARDS_TOKEN_ADDRESS);
-      setTokenInfo(info);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch token info");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchTokenInfo();
-  }, []);
+  // Extract token info from results
+  const tokenInfo =
+    tokenMetadata && tokenMetadata.every((result) => result.status === "success")
+      ? {
+          name: tokenMetadata[0].result as string,
+          symbol: tokenMetadata[1].result as string,
+          decimals: tokenMetadata[2].result as number,
+          address: REWARDS_TOKEN_ADDRESS,
+        }
+      : null;
 
   const openEtherscan = (): void => {
     window.open(`https://sepolia.etherscan.io/token/${REWARDS_TOKEN_ADDRESS}`, "_blank");
@@ -48,12 +60,7 @@ export const TokenInspector = (): JSX.Element => {
           <Search className="h-5 w-5 text-primary" />
           <CardTitle className="text-lg">Rewards Token Inspector</CardTitle>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={openEtherscan}
-          className="h-8"
-        >
+        <Button variant="outline" size="sm" onClick={openEtherscan} className="h-8">
           <ExternalLink className="h-4 w-4 mr-1" />
           Etherscan
         </Button>
@@ -67,12 +74,10 @@ export const TokenInspector = (): JSX.Element => {
               {REWARDS_TOKEN_ADDRESS.slice(0, 6)}...{REWARDS_TOKEN_ADDRESS.slice(-4)}
             </Badge>
           </div>
-          <div className="text-xs font-mono text-muted-foreground break-all">
-            {REWARDS_TOKEN_ADDRESS}
-          </div>
+          <div className="text-xs font-mono text-muted-foreground break-all">{REWARDS_TOKEN_ADDRESS}</div>
         </div>
 
-        {loading && (
+        {isLoading && (
           <div className="text-center py-4">
             <p className="text-sm text-muted-foreground">Loading token information...</p>
           </div>
@@ -80,13 +85,8 @@ export const TokenInspector = (): JSX.Element => {
 
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-sm text-red-600">Error: {error}</p>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={fetchTokenInfo}
-              className="mt-2"
-            >
+            <p className="text-sm text-red-600">Error: Failed to fetch token info</p>
+            <Button variant="outline" size="sm" onClick={() => refetch()} className="mt-2">
               Retry
             </Button>
           </div>
