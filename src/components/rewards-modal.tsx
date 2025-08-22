@@ -1,9 +1,10 @@
-import { useWriteContract, useWaitForTransactionReceipt, useAccount } from "wagmi";
+import { useWriteContract, useWaitForTransactionReceipt, useAccount, useReadContract } from "wagmi";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Gift, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import { USDT_ABI } from "@/constants";
+import { erc20Abi, parseUnits } from "viem";
 
 interface RewardsModalProps {
   readonly isOpen: boolean;
@@ -11,10 +12,16 @@ interface RewardsModalProps {
 }
 
 const TOKEN_CONTRACT = "0x118f6c0090ffd227cbefe1c6d8a803198c4422f0" as const;
-const MINT_AMOUNT = 100n * 10n ** 18n; // 100 tokens as shown in UI
 
 export function RewardsModal({ isOpen, onClose }: RewardsModalProps) {
   const { address } = useAccount();
+
+  // Read the token decimals from the contract
+  const { data: tokenDecimals } = useReadContract({
+    address: TOKEN_CONTRACT,
+    abi: erc20Abi,
+    functionName: "decimals",
+  });
 
   const { writeContract, data: hash, error, isPending } = useWriteContract();
 
@@ -28,16 +35,24 @@ export function RewardsModal({ isOpen, onClose }: RewardsModalProps) {
       return;
     }
 
+    if (!tokenDecimals) {
+      console.error("Token decimals not loaded yet");
+      return;
+    }
+
     try {
+      // Calculate the correct mint amount using actual decimals from contract
+      const mintAmount = parseUnits("100", tokenDecimals);
       console.log("Starting mint process for address:", address);
-      console.log("Mint amount:", MINT_AMOUNT.toString());
+      console.log("Token decimals:", tokenDecimals);
+      console.log("Mint amount:", mintAmount.toString(), "(100 tokens)");
 
       writeContract(
         {
           address: TOKEN_CONTRACT,
           abi: USDT_ABI,
           functionName: "mint",
-          args: [address, MINT_AMOUNT],
+          args: [address, mintAmount],
         },
         {
           onError: (error) => {
@@ -103,9 +118,10 @@ export function RewardsModal({ isOpen, onClose }: RewardsModalProps) {
       icon: <Gift className="h-8 w-8 text-blue-500" />,
       title: "Claim Your Rewards",
       description: "Mint 100 tokens to your wallet as a reward for using our app!",
-      buttonText: "Mint 100 Tokens",
+      buttonText: tokenDecimals ? "Mint 100 Tokens" : "Loading...",
       buttonVariant: "default" as const,
       onButtonClick: handleMint,
+      disabled: !tokenDecimals,
     };
   };
 
