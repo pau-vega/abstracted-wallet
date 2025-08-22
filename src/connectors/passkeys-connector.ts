@@ -206,7 +206,6 @@ export function passkeysWalletConnector(options: PasskeysConnectorOptions) {
                 const receipt = await kernelClient.waitForUserOperationReceipt({ hash: userOpHash });
 
                 return receipt.receipt.transactionHash;
-                // Send as user operation
               }
             }
           },

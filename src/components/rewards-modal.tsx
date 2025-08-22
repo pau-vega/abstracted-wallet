@@ -4,8 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Gift, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import { USDT_ABI } from "@/constants";
-import { erc20Abi, parseUnits } from "viem";
+import { erc20Abi, parseUnits, encodeFunctionData } from "viem";
 import { sepolia, polygonAmoy } from "wagmi/chains";
+import { useGasEstimation } from "@/hooks/use-gas-estimation";
+import { GasEstimationDisplay } from "@/components/gas-estimation-display";
 
 interface RewardsModalProps {
   readonly isOpen: boolean;
@@ -33,6 +35,24 @@ export function RewardsModal({ isOpen, onClose }: RewardsModalProps) {
     query: {
       enabled: !!tokenContract, // Only fetch if token contract exists for this network
     },
+  });
+
+  // Prepare mint transaction data for gas estimation
+  const mintAmount = tokenDecimals ? parseUnits("100", tokenDecimals) : undefined;
+  const mintData =
+    address && mintAmount
+      ? encodeFunctionData({
+          abi: USDT_ABI,
+          functionName: "mint",
+          args: [address, mintAmount],
+        })
+      : undefined;
+
+  // Estimate gas for the mint operation
+  const gasEstimation = useGasEstimation({
+    to: tokenContract,
+    data: mintData,
+    enabled: !!tokenContract && !!address && !!tokenDecimals,
   });
 
   const { writeContract, data: hash, error, isPending } = useWriteContract();
@@ -64,12 +84,24 @@ export function RewardsModal({ isOpen, onClose }: RewardsModalProps) {
       console.log("Token decimals:", tokenDecimals);
       console.log("Mint amount:", mintAmount.toString(), "(100 tokens)");
 
+      const gasParams = gasEstimation.selected.maxFeePerGas
+        ? {
+            gas: gasEstimation.selected.gasLimit,
+            maxFeePerGas: gasEstimation.selected.maxFeePerGas,
+            maxPriorityFeePerGas: gasEstimation.selected.maxPriorityFeePerGas,
+          }
+        : {
+            gas: gasEstimation.selected.gasLimit,
+            gasPrice: gasEstimation.selected.gasPrice,
+          };
+
       writeContract(
         {
           address: tokenContract,
           abi: USDT_ABI,
           functionName: "mint",
           args: [address, mintAmount],
+          ...gasParams,
         },
         {
           onError: (error) => {
@@ -181,6 +213,52 @@ export function RewardsModal({ isOpen, onClose }: RewardsModalProps) {
               <Badge variant="outline">100 Tokens</Badge>
             </div>
           </div>
+
+          {/* Gas Estimation Display */}
+          {tokenContract && address && tokenDecimals && !isPending && !isConfirming && !isConfirmed && (
+            <GasEstimationDisplay
+              slow={gasEstimation.slow}
+              standard={gasEstimation.standard}
+              fast={gasEstimation.fast}
+              selectedOption={gasEstimation.selectedOption}
+              onOptionChange={gasEstimation.setSelectedOption}
+              isLoading={gasEstimation.isLoading}
+              error={gasEstimation.error}
+              variant="default"
+            />
+          )}
+
+          {/* Faucet Link for Test ETH */}
+          {tokenContract && address && !isPending && !isConfirming && !isConfirmed && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <div className="flex items-start gap-3">
+                <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-blue-600 text-xs font-bold">?</span>
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm text-blue-800 mb-2">
+                    ¿No tienes ETH para gas? Obtén ETH de prueba gratis para testing.
+                  </p>
+                  <a
+                    href="https://cloud.google.com/application/web3/faucet/ethereum/sepolia"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 font-medium underline"
+                  >
+                    <span>Google Cloud Sepolia Faucet</span>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                      />
+                    </svg>
+                  </a>
+                </div>
+              </div>
+            </div>
+          )}
 
           <Button
             onClick={status.onButtonClick}

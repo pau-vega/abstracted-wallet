@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Gift, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import { parseEther } from "viem";
+import { useEthTransferGasEstimation } from "@/hooks/use-gas-estimation";
+import { GasEstimationDisplay } from "@/components/gas-estimation-display";
 
 interface SimpleTestModalProps {
   readonly isOpen: boolean;
@@ -12,6 +14,13 @@ interface SimpleTestModalProps {
 
 export function SimpleTestModal({ isOpen, onClose }: SimpleTestModalProps) {
   const { address } = useAccount();
+
+  // Gas estimation for sending 0.001 ETH to self
+  const gasEstimation = useEthTransferGasEstimation(
+    address, // to address (self)
+    "0.001", // amount
+    isOpen && !!address, // enabled when modal is open and address available
+  );
 
   const { sendTransaction, data: hash, error, isPending } = useSendTransaction();
 
@@ -29,9 +38,21 @@ export function SimpleTestModal({ isOpen, onClose }: SimpleTestModalProps) {
       console.log("Starting simple transaction test for address:", address);
 
       // Send a tiny amount of ETH to self (0.001 ETH)
+      const gasParams = gasEstimation.selected.maxFeePerGas
+        ? {
+            gas: gasEstimation.selected.gasLimit,
+            maxFeePerGas: gasEstimation.selected.maxFeePerGas,
+            maxPriorityFeePerGas: gasEstimation.selected.maxPriorityFeePerGas,
+          }
+        : {
+            gas: gasEstimation.selected.gasLimit,
+            gasPrice: gasEstimation.selected.gasPrice,
+          };
+
       sendTransaction({
         to: address,
         value: parseEther("0.001"),
+        ...gasParams,
       });
     } catch (err) {
       console.error("Failed to send test transaction:", err);
@@ -115,6 +136,52 @@ export function SimpleTestModal({ isOpen, onClose }: SimpleTestModalProps) {
               <Badge variant="outline">0.001 ETH</Badge>
             </div>
           </div>
+
+          {/* Gas Estimation Display */}
+          {address && !isPending && !isConfirming && !isConfirmed && (
+            <GasEstimationDisplay
+              slow={gasEstimation.slow}
+              standard={gasEstimation.standard}
+              fast={gasEstimation.fast}
+              selectedOption={gasEstimation.selectedOption}
+              onOptionChange={gasEstimation.setSelectedOption}
+              isLoading={gasEstimation.isLoading}
+              error={gasEstimation.error}
+              variant="default"
+            />
+          )}
+
+          {/* Faucet Link for Test ETH */}
+          {address && !isPending && !isConfirming && !isConfirmed && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <div className="flex items-start gap-3">
+                <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-blue-600 text-xs font-bold">?</span>
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm text-blue-800 mb-2">
+                    ¿No tienes ETH para gas? Obtén ETH de prueba gratis para testing.
+                  </p>
+                  <a
+                    href="https://cloud.google.com/application/web3/faucet/ethereum/sepolia"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 font-medium underline"
+                  >
+                    <span>Google Cloud Sepolia Faucet</span>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                      />
+                    </svg>
+                  </a>
+                </div>
+              </div>
+            </div>
+          )}
 
           <Button
             onClick={status.onButtonClick}
