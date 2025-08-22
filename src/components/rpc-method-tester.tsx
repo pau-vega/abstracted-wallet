@@ -58,9 +58,13 @@ export const RpcMethodTester = () => {
   const { isLoading: isConfirmingTx, isSuccess: isTxConfirmed } = useWaitForTransactionReceipt({ hash: txHash });
 
   // Read operations
-  const { data: ethBalance, isLoading: isEthBalanceLoading, error: ethBalanceError } = useBalance({ 
+  const {
+    data: ethBalance,
+    isLoading: isEthBalanceLoading,
+    error: ethBalanceError,
+  } = useBalance({
     address,
-    query: { enabled: !!address && isConnected }
+    query: { enabled: !!address && isConnected },
   });
 
   // FUSDT token data
@@ -130,8 +134,8 @@ export const RpcMethodTester = () => {
     if (tokenType === "eth") {
       return parseUnits(amount, ethDecimals);
     } else if (tokenType === "fusdt") {
-      const decimals = fusdtDecimals ?? 18; // Fallback to 18 if not loaded yet
-      return parseUnits(amount, decimals);
+      if (!fusdtDecimals) throw new Error("FUSDT decimals not loaded");
+      return parseUnits(amount, fusdtDecimals);
     }
     return parseUnits(amount, 18); // Default fallback
   };
@@ -215,7 +219,6 @@ export const RpcMethodTester = () => {
       if (testType === "eth") {
         // Send ETH
         const value = parseTokenAmount(testAmount, "eth");
-        console.log("value", value);
         sendTransaction(
           { to: to as `0x${string}`, value },
           {
@@ -235,6 +238,8 @@ export const RpcMethodTester = () => {
       } else {
         // Send FUSDT (ERC20 transfer)
         const amount = parseTokenAmount(testAmount, "fusdt");
+        console.log("amount", amount);
+
         const data = encodeFunctionData({
           abi: erc20Abi,
           functionName: "transfer",
@@ -245,7 +250,6 @@ export const RpcMethodTester = () => {
           {
             to: fusdtAddress as `0x${string}`,
             data,
-            value: 0n, // No ETH value for ERC20 transfer
           },
           {
             onSuccess: (hash) => {
@@ -446,19 +450,24 @@ export const RpcMethodTester = () => {
                 <div className="text-sm font-medium">Current Balances:</div>
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div>
-                    ETH: {isEthBalanceLoading 
-                      ? "Loading..." 
-                      : ethBalanceError 
-                      ? "Error" 
-                      : ethBalance?.formatted 
-                      ? ethBalance.formatted.slice(0, 8) 
-                      : "0"}
+                    ETH:{" "}
+                    {isEthBalanceLoading
+                      ? "Loading..."
+                      : ethBalanceError
+                        ? "Error"
+                        : ethBalance?.formatted
+                          ? ethBalance.formatted.slice(0, 8)
+                          : "0"}
                     {process.env.NODE_ENV === "development" && (
                       <span className="text-xs text-muted-foreground ml-1">
                         (
-                        {isEthBalanceLoading ? "loading" : 
-                         ethBalanceError ? "error" : 
-                         ethBalance ? "loaded" : "no data"}
+                        {isEthBalanceLoading
+                          ? "loading"
+                          : ethBalanceError
+                            ? "error"
+                            : ethBalance
+                              ? "loaded"
+                              : "no data"}
                         )
                       </span>
                     )}

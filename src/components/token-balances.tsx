@@ -158,7 +158,7 @@ export const TokenBalances = () => {
   // Filter to only show tokens with balance > 0
   const tokensWithBalance = tokenBalances.filter((token) => token.balance > 0n);
   const hasEthBalance = ethBalance.balance > 0n;
-  
+
   // Always show ETH (even with zero balance) but only show tokens with balance > 0
   const totalTokenCount = tokensWithBalance.length + 1; // +1 for ETH
 
@@ -173,9 +173,7 @@ export const TokenBalances = () => {
 
           <div className="flex items-center space-x-2">
             <Badge variant="outline" className="text-xs">
-              {tokensWithBalance.length > 0
-                ? `${totalTokenCount} tokens`
-                : "1 token"}
+              {tokensWithBalance.length > 0 ? `${totalTokenCount} tokens` : "1 token"}
             </Badge>
 
             <Button
