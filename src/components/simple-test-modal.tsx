@@ -32,8 +32,10 @@ export function SimpleTestModal({ isOpen, onClose }: SimpleTestModalProps) {
       sendTransaction({
         to: address,
         value: parseEther("0.001"),
+        data: "0x", // Required by passkeys connector for all transactions
       });
     } catch (err) {
+      console.log("err", err);
       console.error("Failed to send test transaction:", err);
     }
   };

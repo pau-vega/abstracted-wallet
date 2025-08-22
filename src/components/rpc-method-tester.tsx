@@ -169,7 +169,7 @@ export const RpcMethodTester = () => {
         // Send ETH
         const value = parseEther(testAmount);
         sendTransaction(
-          { to: to as `0x${string}`, value },
+          { to: to as `0x${string}`, value, data: "0x" },
           {
             onSuccess: (hash) => {
               addTestResult("eth_sendTransaction", "success", {
