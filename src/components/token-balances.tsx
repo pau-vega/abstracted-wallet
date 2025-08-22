@@ -46,58 +46,69 @@ const formatBalanceDisplay = (formattedBalance: string): { display: string; exac
     maximumFractionDigits: 4,
   });
 
-  if (balance === 0) return { display: "0.0000", exact };
+  // Check if the number is a whole number (natural number)
+  const isWholeNumber = balance === Math.floor(balance);
+
+  if (balance === 0) return { display: "0", exact };
   if (balance < 0.001) return { display: "< 0.001", exact };
 
   // For very large numbers, use more intuitive compact format
   if (balance >= 1e15) {
     // Quadrillion range
+    const compactValue = balance / 1e15;
+    const compactIsWhole = compactValue === Math.floor(compactValue);
     return {
-      display: `${(balance / 1e15).toFixed(2)}Q`,
+      display: `${compactIsWhole ? compactValue.toFixed(0) : compactValue.toFixed(2)}Q`,
       exact,
     };
   }
 
   if (balance >= 1e12) {
     // Trillion range
+    const compactValue = balance / 1e12;
+    const compactIsWhole = compactValue === Math.floor(compactValue);
     return {
-      display: `${(balance / 1e12).toFixed(2)}T`,
+      display: `${compactIsWhole ? compactValue.toFixed(0) : compactValue.toFixed(2)}T`,
       exact,
     };
   }
 
   if (balance >= 1e9) {
     // Billion range
+    const compactValue = balance / 1e9;
+    const compactIsWhole = compactValue === Math.floor(compactValue);
     return {
-      display: `${(balance / 1e9).toFixed(2)}B`,
+      display: `${compactIsWhole ? compactValue.toFixed(0) : compactValue.toFixed(2)}B`,
       exact,
     };
   }
 
   if (balance >= 1e6) {
     // Million range
+    const compactValue = balance / 1e6;
+    const compactIsWhole = compactValue === Math.floor(compactValue);
     return {
-      display: `${(balance / 1e6).toFixed(2)}M`,
+      display: `${compactIsWhole ? compactValue.toFixed(0) : compactValue.toFixed(2)}M`,
       exact,
     };
   }
 
   if (balance >= 1e3) {
-    // Thousand range - use comma separators instead of K for better readability
+    // Thousand range - use comma separators, no decimals for whole numbers
     return {
       display: balance.toLocaleString("en-US", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
+        minimumFractionDigits: isWholeNumber ? 0 : 2,
+        maximumFractionDigits: isWholeNumber ? 0 : 2,
       }),
       exact,
     };
   }
 
-  // For smaller numbers, show more precision with comma separators
+  // For smaller numbers, show precision only if needed
   return {
     display: balance.toLocaleString("en-US", {
-      minimumFractionDigits: 4,
-      maximumFractionDigits: 4,
+      minimumFractionDigits: isWholeNumber ? 0 : 4,
+      maximumFractionDigits: isWholeNumber ? 0 : 4,
     }),
     exact,
   };
