@@ -212,22 +212,25 @@ export function passkeysWalletConnector(options: PasskeysConnectorOptions) {
                   throw new Error("eth_sendTransaction missing transaction parameter");
                 }
                 const tx = params[0]! as TransactionRequest;
-                if (!tx || !tx.to || !tx.data) throw new Error("eth_sendTransaction missing tx params");
+                if (!tx || !tx.to) throw new Error("eth_sendTransaction missing tx params");
 
                 // Encode the call
                 const callData = await kernelClient.account.encodeCalls([
                   {
                     to: tx.to,
                     value: tx.value,
-                    data: tx.data,
+                    data: tx.data ?? "0x",
                   },
                 ]);
+
                 // Send as user operation
                 const userOpHash = await kernelClient.sendUserOperation({ callData });
+
                 // Wait for bundler → actual tx
                 const receipt = await kernelClient.waitForUserOperationReceipt({ hash: userOpHash });
 
                 return receipt.receipt.transactionHash;
+                // Send as user operation
               }
             }
           },
