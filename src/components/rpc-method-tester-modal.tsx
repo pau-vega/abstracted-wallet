@@ -430,8 +430,8 @@ export const RpcMethodTesterModal = ({ isOpen, onClose }: RpcMethodTesterModalPr
         <div className="flex-1 min-h-0">
           <Tabs defaultValue="transactions" className="w-full flex flex-col">
             <TabsList className="grid w-full grid-cols-4 flex-shrink-0">
-              <TabsTrigger value="transactions">Transactions</TabsTrigger>
-              <TabsTrigger value="signing">Signing</TabsTrigger>
+              <TabsTrigger value="transactions">Send</TabsTrigger>
+              <TabsTrigger value="signing">Sign</TabsTrigger>
               <TabsTrigger value="wallet">Wallet</TabsTrigger>
               <TabsTrigger value="results">Results</TabsTrigger>
             </TabsList>
