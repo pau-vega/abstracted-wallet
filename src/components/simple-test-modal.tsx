@@ -1,60 +1,40 @@
-import {useWriteContract, useWaitForTransactionReceipt, useAccount} from "wagmi";
+import {useSendTransaction, useWaitForTransactionReceipt, useAccount} from "wagmi";
 import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle} from "@/components/ui/dialog";
 import {Button} from "@/components/ui/button";
 import {Badge} from "@/components/ui/badge";
 import {Gift, Loader2, CheckCircle, AlertCircle} from "lucide-react";
-import {USDT_ABI} from "@/constants";
+import {parseEther} from "viem";
 
-interface RewardsModalProps {
+interface SimpleTestModalProps {
   readonly isOpen: boolean;
   readonly onClose: () => void;
 }
 
-const TOKEN_CONTRACT = "0x118f6c0090ffd227cbefe1c6d8a803198c4422f0" as const;
-const MINT_AMOUNT = 1n * 10n ** 18n; // Start with 1 token to test
-
-export function RewardsModal({isOpen, onClose}: RewardsModalProps) {
+export function SimpleTestModal({isOpen, onClose}: SimpleTestModalProps) {
   const {address} = useAccount();
 
-  const {writeContract, data: hash, error, isPending} = useWriteContract();
+  const {sendTransaction, data: hash, error, isPending} = useSendTransaction();
 
   const {isLoading: isConfirming, isSuccess: isConfirmed} = useWaitForTransactionReceipt({
     hash,
   });
 
-  const handleMint = async (): Promise<void> => {
+  const handleTest = async (): Promise<void> => {
     if (!address) {
       console.error("No wallet address found");
       return;
     }
 
     try {
-      console.log("Starting mint process for address:", address);
-      console.log("Mint amount:", MINT_AMOUNT.toString());
+      console.log("Starting simple transaction test for address:", address);
 
-      writeContract(
-        {
-          address: TOKEN_CONTRACT,
-          abi: USDT_ABI,
-          functionName: "mint",
-          args: [address, MINT_AMOUNT],
-        },
-        {
-          onError: (error) => {
-            console.error("Failed to mint tokens:", error);
-            console.error("Error details:", {
-              message: error.message,
-              cause: error.cause,
-              name: error.name,
-            });
-          },
-          onSuccess: (data) => {
-            console.log("Mint transaction successful:", data);
-          },
-        }
-      );
+      // Send a tiny amount of ETH to self (0.001 ETH)
+      sendTransaction({
+        to: address,
+        value: parseEther("0.001"),
+      });
     } catch (err) {
-      console.error("Failed to mint tokens:", err);
+      console.error("Failed to send test transaction:", err);
     }
   };
 
@@ -68,18 +48,19 @@ export function RewardsModal({isOpen, onClose}: RewardsModalProps) {
     if (error) {
       return {
         icon: <AlertCircle className='h-8 w-8 text-red-500' />,
-        title: "Minting Failed",
-        description: "There was an error minting your tokens. Please try again.",
+        title: "Test Failed",
+        description: error.message || "There was an error with the test transaction. Please try again.",
         buttonText: "Try Again",
         buttonVariant: "destructive" as const,
+        onButtonClick: handleTest,
       };
     }
 
     if (isConfirmed) {
       return {
         icon: <CheckCircle className='h-8 w-8 text-green-500' />,
-        title: "Tokens Minted Successfully!",
-        description: "100 tokens have been added to your wallet.",
+        title: "Test Successful!",
+        description: "Your ZeroDev smart account is working correctly!",
         buttonText: "Close",
         buttonVariant: "default" as const,
         onButtonClick: handleClose,
@@ -89,10 +70,8 @@ export function RewardsModal({isOpen, onClose}: RewardsModalProps) {
     if (isPending || isConfirming) {
       return {
         icon: <Loader2 className='h-8 w-8 text-blue-500 animate-spin' />,
-        title: isPending ? "Confirming Transaction..." : "Minting Tokens...",
-        description: isPending
-          ? "Please confirm the transaction in your wallet."
-          : "Your tokens are being minted. This may take a few moments.",
+        title: isPending ? "Confirming Transaction..." : "Processing...",
+        description: isPending ? "Please confirm the transaction." : "Your test transaction is being processed.",
         buttonText: "Please Wait",
         buttonVariant: "secondary" as const,
         onButtonClick: () => {},
@@ -102,11 +81,11 @@ export function RewardsModal({isOpen, onClose}: RewardsModalProps) {
 
     return {
       icon: <Gift className='h-8 w-8 text-blue-500' />,
-      title: "Claim Your Rewards",
-      description: "Mint 100 tokens to your wallet as a reward for using our app!",
-      buttonText: "Mint 100 Tokens",
+      title: "Test Your Smart Account",
+      description: "Send a small test transaction to verify your ZeroDev setup is working.",
+      buttonText: "Run Test Transaction",
       buttonVariant: "default" as const,
-      onButtonClick: handleMint,
+      onButtonClick: handleTest,
     };
   };
 
@@ -126,14 +105,14 @@ export function RewardsModal({isOpen, onClose}: RewardsModalProps) {
         <div className='space-y-4 mt-6'>
           <div className='bg-muted/50 rounded-lg p-4 space-y-2'>
             <div className='flex items-center justify-between'>
-              <span className='text-sm font-medium'>Token Contract</span>
+              <span className='text-sm font-medium'>Test Type</span>
               <Badge variant='secondary' className='font-mono text-xs'>
-                {TOKEN_CONTRACT.slice(0, 6)}...{TOKEN_CONTRACT.slice(-4)}
+                Self Transfer
               </Badge>
             </div>
             <div className='flex items-center justify-between'>
               <span className='text-sm font-medium'>Amount</span>
-              <Badge variant='outline'>100 Tokens</Badge>
+              <Badge variant='outline'>0.001 ETH</Badge>
             </div>
           </div>
 
