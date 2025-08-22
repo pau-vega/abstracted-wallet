@@ -10,7 +10,7 @@ import { useState } from "react";
 import { RewardsModal } from "@/components/rewards-modal";
 import { SimpleTestModal } from "@/components/simple-test-modal";
 import { TokenBalances } from "@/components/token-balances";
-import { RpcMethodTester } from "@/components/rpc-method-tester";
+import { RpcMethodTesterModal } from "@/components/rpc-method-tester-modal";
 
 export function Account() {
   const { address, connector } = useAccount();
@@ -21,7 +21,7 @@ export function Account() {
   const [copied, setCopied] = useState(false);
   const [isRewardsModalOpen, setIsRewardsModalOpen] = useState(false);
   const [isTestModalOpen, setIsTestModalOpen] = useState(false);
-  const [showRpcTester, setShowRpcTester] = useState(false);
+  const [isRpcTesterModalOpen, setIsRpcTesterModalOpen] = useState(false);
 
   const isPasskey = connector?.name === "Passkey";
 
@@ -97,24 +97,15 @@ export function Account() {
 
         <Separator />
 
-        {/* RPC Method Tester Section */}
-        {showRpcTester && (
-          <div className="space-y-4">
-            <RpcMethodTester />
-          </div>
-        )}
-
-        <Separator />
-
         <div className="space-y-3">
           <Button
-            onClick={() => setShowRpcTester(!showRpcTester)}
+            onClick={() => setIsRpcTesterModalOpen(true)}
             variant="default"
             size="lg"
             className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white border-0"
           >
             <Settings className="mr-2 h-4 w-4" />
-            {showRpcTester ? "Hide" : "Show"} RPC Method Tester
+            RPC Method Tester
           </Button>
 
           <Button
@@ -151,6 +142,7 @@ export function Account() {
 
       <SimpleTestModal isOpen={isTestModalOpen} onClose={() => setIsTestModalOpen(false)} />
       <RewardsModal isOpen={isRewardsModalOpen} onClose={() => setIsRewardsModalOpen(false)} />
+      <RpcMethodTesterModal isOpen={isRpcTesterModalOpen} onClose={() => setIsRpcTesterModalOpen(false)} />
     </>
   );
 }
