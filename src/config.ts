@@ -7,7 +7,7 @@ import { createStorage } from "wagmi";
 const ZERODEV_PROJECT_ID = import.meta.env.VITE_ZERODEV_PROJECT_ID;
 
 export const config = createConfig({
-  chains: [sepolia],
+  chains: [sepolia], // Using Sepolia as our main network
   connectors: [
     passkeysWalletConnector({
       projectId: ZERODEV_PROJECT_ID,

@@ -161,32 +161,8 @@ export const TokenBalances = (): JSX.Element => {
             <Coins className="h-12 w-12 mx-auto mb-3 opacity-50" />
             <p className="text-sm">No token balances found</p>
             <p className="text-xs mt-1">
-              Your account doesn't have any ETH or supported tokens yet
+              Your account doesn't have any ETH or tokens yet
             </p>
-          </div>
-        )}
-
-        {/* Faucet Info */}
-        {!isLoading && !hasEthBalance && (
-          <div className="mt-4 p-3 bg-muted/50 rounded-lg border-dashed border">
-            <div className="flex items-start space-x-2">
-              <AlertCircle className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
-              <div className="text-sm space-y-1">
-                <p className="font-medium text-blue-700">Need test tokens?</p>
-                <p className="text-muted-foreground text-xs">
-                  Get free Sepolia ETH from faucets to start testing your smart account.
-                </p>
-                <Button 
-                  variant="link" 
-                  size="sm" 
-                  className="h-auto p-0 text-xs text-blue-600 hover:text-blue-700"
-                  onClick={() => window.open("https://sepoliafaucet.com", "_blank")}
-                >
-                  Open Sepolia Faucet
-                  <ExternalLink className="h-3 w-3 ml-1" />
-                </Button>
-              </div>
-            </div>
           </div>
         )}
       </CardContent>
