@@ -405,7 +405,7 @@ export const RpcMethodTesterModal = ({ isOpen, onClose }: RpcMethodTesterModalPr
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-4xl h-[80vh] max-h-[80vh] overflow-hidden flex flex-col">
+      <DialogContent className="sm:max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
         <DialogHeader className="pb-4 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="space-y-1">
@@ -427,8 +427,8 @@ export const RpcMethodTesterModal = ({ isOpen, onClose }: RpcMethodTesterModalPr
           </div>
         </DialogHeader>
 
-        <div className="flex-1 overflow-hidden min-h-0">
-          <Tabs defaultValue="transactions" className="w-full h-full flex flex-col">
+        <div className="flex-1 min-h-0">
+          <Tabs defaultValue="transactions" className="w-full flex flex-col">
             <TabsList className="grid w-full grid-cols-4 flex-shrink-0">
               <TabsTrigger value="transactions">Transactions</TabsTrigger>
               <TabsTrigger value="signing">Signing</TabsTrigger>
@@ -436,8 +436,8 @@ export const RpcMethodTesterModal = ({ isOpen, onClose }: RpcMethodTesterModalPr
               <TabsTrigger value="results">Results</TabsTrigger>
             </TabsList>
 
-            <div className="flex-1 overflow-y-auto mt-4 min-h-0">
-              <TabsContent value="transactions" className="space-y-6 mt-0 min-h-[400px]">
+            <div className="mt-4">
+              <TabsContent value="transactions" className="space-y-6 mt-0 min-h-[460px]">
                 <div className="space-y-4">
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">
@@ -587,7 +587,7 @@ export const RpcMethodTesterModal = ({ isOpen, onClose }: RpcMethodTesterModalPr
                 </div>
               </TabsContent>
 
-              <TabsContent value="signing" className="space-y-6 mt-0 min-h-[400px]">
+              <TabsContent value="signing" className="space-y-6 mt-0 min-h-[460px]">
                 <div className="space-y-4">
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">
@@ -646,7 +646,7 @@ export const RpcMethodTesterModal = ({ isOpen, onClose }: RpcMethodTesterModalPr
                 </div>
               </TabsContent>
 
-              <TabsContent value="wallet" className="space-y-6 mt-0 min-h-[400px]">
+              <TabsContent value="wallet" className="space-y-6 mt-0 min-h-[460px]">
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <Button
@@ -711,7 +711,7 @@ export const RpcMethodTesterModal = ({ isOpen, onClose }: RpcMethodTesterModalPr
                 </div>
               </TabsContent>
 
-              <TabsContent value="results" className="space-y-4 mt-0 min-h-[400px]">
+              <TabsContent value="results" className="space-y-4 mt-0 min-h-[460px]">
                 <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border">
                   <div className="flex items-center gap-2">
                     <Info className="h-4 w-4 text-muted-foreground" />
@@ -725,7 +725,7 @@ export const RpcMethodTesterModal = ({ isOpen, onClose }: RpcMethodTesterModalPr
                   </Button>
                 </div>
 
-                <div className="space-y-2 h-80 overflow-y-auto">
+                <div className="space-y-2 max-h-80 overflow-y-auto">
                   {testResults.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
                       <PlayCircle className="h-12 w-12 mx-auto mb-3 opacity-50" />
