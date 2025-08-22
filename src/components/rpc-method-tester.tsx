@@ -408,9 +408,7 @@ export const RpcMethodTester = () => {
               <PlayCircle className="h-6 w-6 text-primary" />
               RPC Method Tester
             </CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Test blockchain RPC methods with your connected wallet
-            </p>
+            <p className="text-sm text-muted-foreground">Test blockchain RPC methods with your connected wallet</p>
           </div>
           <div className="flex flex-col gap-2">
             <Badge variant="outline" className="text-xs">
@@ -437,8 +435,12 @@ export const RpcMethodTester = () => {
             <div className="space-y-4">
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <Label htmlFor="tx-type" className="text-sm font-medium">Transaction Type</Label>
-                  <Badge variant="secondary" className="text-xs">Required</Badge>
+                  <Label htmlFor="tx-type" className="text-sm font-medium">
+                    Transaction Type
+                  </Label>
+                  <Badge variant="secondary" className="text-xs">
+                    Required
+                  </Badge>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <Button
@@ -484,9 +486,11 @@ export const RpcMethodTester = () => {
                   <div className="flex items-center justify-between p-2 bg-background/60 rounded">
                     <span className="text-xs font-medium text-muted-foreground">FUSDT</span>
                     <span className="text-sm font-mono">
-                      {fusdtBalance && fusdtDecimals !== undefined
-                        ? formatTokenBalance(fusdtBalance, fusdtDecimals, "").replace(" ", "").slice(0, 8)
-                        : <Loader2 className="h-3 w-3 animate-spin" />}
+                      {fusdtBalance && fusdtDecimals !== undefined ? (
+                        formatTokenBalance(fusdtBalance, fusdtDecimals, "").replace(" ", "").slice(0, 8)
+                      ) : (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      )}
                     </span>
                   </div>
                 </div>
@@ -498,7 +502,9 @@ export const RpcMethodTester = () => {
                     <Label htmlFor="amount" className="text-sm font-medium">
                       Amount ({testType === "fusdt" ? "FUSDT" : "ETH"})
                     </Label>
-                    <Badge variant="secondary" className="text-xs">Required</Badge>
+                    <Badge variant="secondary" className="text-xs">
+                      Required
+                    </Badge>
                   </div>
                   <div className="relative">
                     <Input
@@ -514,15 +520,17 @@ export const RpcMethodTester = () => {
                       </span>
                     </div>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Enter the amount to send
-                  </p>
+                  <p className="text-xs text-muted-foreground">Enter the amount to send</p>
                 </div>
-                
+
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <Label htmlFor="to-address" className="text-sm font-medium">To Address</Label>
-                    <Badge variant="outline" className="text-xs">Optional</Badge>
+                    <Label htmlFor="to-address" className="text-sm font-medium">
+                      To Address
+                    </Label>
+                    <Badge variant="outline" className="text-xs">
+                      Optional
+                    </Badge>
                   </div>
                   <Input
                     id="to-address"
@@ -531,14 +539,12 @@ export const RpcMethodTester = () => {
                     placeholder="0x... (defaults to self)"
                     className="font-mono text-sm"
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Recipient address (leave empty to send to yourself)
-                  </p>
+                  <p className="text-xs text-muted-foreground">Recipient address (leave empty to send to yourself)</p>
                 </div>
               </div>
-              <Button 
-                onClick={testSendTransaction} 
-                disabled={isSendingTx || isConfirmingTx || !testAmount} 
+              <Button
+                onClick={testSendTransaction}
+                disabled={isSendingTx || isConfirmingTx || !testAmount}
                 className="w-full h-12 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-medium"
               >
                 {isSendingTx || isConfirmingTx ? (
@@ -558,9 +564,9 @@ export const RpcMethodTester = () => {
                   <CheckCircle className="h-4 w-4 text-green-600" />
                   <AlertDescription className="flex items-center justify-between">
                     <span>Transaction confirmed successfully!</span>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() => copyToClipboard(txHash || "")}
                       className="h-6 text-green-700 hover:text-green-800"
                     >
@@ -577,8 +583,12 @@ export const RpcMethodTester = () => {
             <div className="space-y-4">
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <Label htmlFor="message" className="text-sm font-medium">Message to Sign</Label>
-                  <Badge variant="secondary" className="text-xs">Required</Badge>
+                  <Label htmlFor="message" className="text-sm font-medium">
+                    Message to Sign
+                  </Label>
+                  <Badge variant="secondary" className="text-xs">
+                    Required
+                  </Badge>
                 </div>
                 <Textarea
                   id="message"
@@ -592,10 +602,10 @@ export const RpcMethodTester = () => {
                   This message will be signed with your wallet's private key
                 </p>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <Button 
-                  onClick={testPersonalSign} 
+                <Button
+                  onClick={testPersonalSign}
                   disabled={isSigningMessage || !testMessage.trim()}
                   variant="outline"
                   className="h-12 flex flex-col gap-1"
@@ -609,8 +619,8 @@ export const RpcMethodTester = () => {
                     </>
                   )}
                 </Button>
-                <Button 
-                  onClick={testTypedDataSign} 
+                <Button
+                  onClick={testTypedDataSign}
                   disabled={isSigningTypedData}
                   variant="outline"
                   className="h-12 flex flex-col gap-1"
@@ -631,30 +641,17 @@ export const RpcMethodTester = () => {
           <TabsContent value="wallet" className="space-y-6">
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <Button 
-                  onClick={testConnectionMethods} 
-                  variant="outline"
-                  className="h-14 flex flex-col gap-1"
-                >
+                <Button onClick={testConnectionMethods} variant="outline" className="h-14 flex flex-col gap-1">
                   <span className="font-medium">Connection Methods</span>
                   <span className="text-xs opacity-70">Test wallet connection info</span>
                 </Button>
-                <Button 
-                  onClick={testReadMethods} 
-                  variant="outline"
-                  className="h-14 flex flex-col gap-1"
-                >
+                <Button onClick={testReadMethods} variant="outline" className="h-14 flex flex-col gap-1">
                   <span className="font-medium">Read Methods</span>
                   <span className="text-xs opacity-70">Test balance and contract reads</span>
                 </Button>
               </div>
-              
-              <Button 
-                onClick={testChainSwitch} 
-                disabled={isSwitchingChain} 
-                variant="outline"
-                className="w-full h-12"
-              >
+
+              <Button onClick={testChainSwitch} disabled={isSwitchingChain} variant="outline" className="w-full h-12">
                 {isSwitchingChain ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -667,13 +664,17 @@ export const RpcMethodTester = () => {
                   </>
                 )}
               </Button>
-              
+
               <Separator />
-              
+
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <Label htmlFor="erc20-address" className="text-sm font-medium">ERC20 Contract Address</Label>
-                  <Badge variant="outline" className="text-xs">Optional</Badge>
+                  <Label htmlFor="erc20-address" className="text-sm font-medium">
+                    ERC20 Contract Address
+                  </Label>
+                  <Badge variant="outline" className="text-xs">
+                    Optional
+                  </Badge>
                 </div>
                 <Input
                   id="erc20-address"
@@ -695,7 +696,7 @@ export const RpcMethodTester = () => {
                 <Info className="h-4 w-4 text-muted-foreground" />
                 <h3 className="font-medium">Test Results</h3>
                 <Badge variant="secondary" className="text-xs">
-                  {testResults.length} {testResults.length === 1 ? 'result' : 'results'}
+                  {testResults.length} {testResults.length === 1 ? "result" : "results"}
                 </Badge>
               </div>
               <Button variant="outline" size="sm" onClick={clearResults} disabled={testResults.length === 0}>

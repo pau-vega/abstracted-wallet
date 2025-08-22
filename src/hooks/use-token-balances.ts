@@ -3,11 +3,11 @@ import { erc20Abi, formatUnits } from "viem";
 
 /**
  * Tokens to load balances for
- * 
+ *
  * To add a new token:
  * 1. Add the token contract address to this array
  * 2. The hook will automatically fetch name, symbol, decimals, and balance from the contract
- * 
+ *
  * Example:
  * const TOKENS_TO_LOAD = [
  *   "0x118f6C0090ffd227CbeFE1C6d8A803198c4422F0", // FUSDT
@@ -139,9 +139,8 @@ export const useTokenBalances = (): UseTokenBalancesReturn => {
     const decimals = decimalsResult?.status === "success" ? (decimalsResult.result as number) : 18;
 
     const balanceError = balanceResult?.status === "failure" ? (balanceResult.error as Error) : null;
-    const metadataError = [nameResult, symbolResult, decimalsResult].find(
-      (result) => result?.status === "failure"
-    )?.error as Error | undefined;
+    const metadataError = [nameResult, symbolResult, decimalsResult].find((result) => result?.status === "failure")
+      ?.error as Error | undefined;
 
     return {
       address: tokenAddress,
