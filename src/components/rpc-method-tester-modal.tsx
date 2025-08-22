@@ -23,7 +23,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Copy, PlayCircle, CheckCircle, XCircle, AlertCircle, Loader2, Wallet, Info, Send, ExternalLink } from "lucide-react";
 import { erc20Abi, encodeFunctionData, parseUnits } from "viem";
-import { sepolia } from "wagmi/chains";
+import { sepolia, holesky } from "wagmi/chains";
 
 interface RpcMethodTesterModalProps {
   readonly isOpen: boolean;
@@ -134,7 +134,9 @@ export const RpcMethodTesterModal = ({ isOpen, onClose }: RpcMethodTesterModalPr
   };
 
   const getExplorerUrl = (type: "tx" | "address" | "token", value: string): string => {
-    const baseUrl = "https://sepolia.etherscan.io";
+    const baseUrl = chainId === holesky.id 
+      ? "https://holesky.etherscan.io" 
+      : "https://sepolia.etherscan.io";
     switch (type) {
       case "tx":
         return `${baseUrl}/tx/${value}`;
@@ -237,7 +239,7 @@ export const RpcMethodTesterModal = ({ isOpen, onClose }: RpcMethodTesterModalPr
       domain: {
         name: "Passkeys RPC Tester",
         version: "1",
-        chainId: sepolia.id,
+        chainId,
         verifyingContract: "0x0000000000000000000000000000000000000000" as `0x${string}`,
       },
       types: {
@@ -340,8 +342,15 @@ export const RpcMethodTesterModal = ({ isOpen, onClose }: RpcMethodTesterModalPr
   const testChainSwitch = async (): Promise<void> => {
     try {
       addTestResult("wallet_switchEthereumChain", "pending");
-      await switchChain({ chainId: sepolia.id });
-      addTestResult("wallet_switchEthereumChain", "success", { chainId: sepolia.id, chainName: sepolia.name });
+      // Switch to the other network (if on Sepolia, switch to Holešky, and vice versa)
+      const targetChain = chainId === sepolia.id ? holesky : sepolia;
+      await switchChain({ chainId: targetChain.id });
+      addTestResult("wallet_switchEthereumChain", "success", { 
+        chainId: targetChain.id, 
+        chainName: targetChain.name,
+        from: currentChain?.name,
+        to: targetChain.name
+      });
     } catch (error) {
       addTestResult(
         "wallet_switchEthereumChain",
@@ -356,8 +365,8 @@ export const RpcMethodTesterModal = ({ isOpen, onClose }: RpcMethodTesterModalPr
     try {
       // Test basic connection info
       addTestResult("eth_accounts", "success", { accounts: address ? [address] : [] });
-      addTestResult("eth_chainId", "success", { chainId: sepolia.id });
-      addTestResult("net_version", "success", { networkVersion: sepolia.id.toString() });
+      addTestResult("eth_chainId", "success", { chainId, chainName: currentChain?.name });
+      addTestResult("net_version", "success", { networkVersion: chainId.toString() });
 
       // Test wallet info
       if (connector) {
@@ -477,7 +486,7 @@ export const RpcMethodTesterModal = ({ isOpen, onClose }: RpcMethodTesterModalPr
                 {address?.slice(0, 6)}...{address?.slice(-4)}
               </Badge>
               <Badge variant="secondary" className="text-xs">
-                {sepolia.name}
+                {currentChain?.name || "Unknown"}
               </Badge>
             </div>
           </div>
@@ -737,7 +746,7 @@ export const RpcMethodTesterModal = ({ isOpen, onClose }: RpcMethodTesterModalPr
                     ) : (
                       <>
                         <PlayCircle className="h-4 w-4 mr-2" />
-                        Test Chain Switch to Sepolia
+                        Switch to {chainId === sepolia.id ? holesky.name : sepolia.name}
                       </>
                     )}
                   </Button>
