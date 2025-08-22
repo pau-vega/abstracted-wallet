@@ -21,7 +21,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Copy, PlayCircle, CheckCircle, XCircle, AlertCircle, Loader2, Wallet, Info, Send } from "lucide-react";
+import { Copy, PlayCircle, CheckCircle, XCircle, AlertCircle, Loader2, Wallet, Info, Send, ExternalLink } from "lucide-react";
 import { erc20Abi, encodeFunctionData, parseUnits } from "viem";
 import { sepolia } from "wagmi/chains";
 
@@ -131,6 +131,62 @@ export const RpcMethodTesterModal = ({ isOpen, onClose }: RpcMethodTesterModalPr
     } catch (err) {
       console.error("Failed to copy:", err);
     }
+  };
+
+  const getExplorerUrl = (type: "tx" | "address" | "token", value: string): string => {
+    const baseUrl = "https://sepolia.etherscan.io";
+    switch (type) {
+      case "tx":
+        return `${baseUrl}/tx/${value}`;
+      case "address":
+        return `${baseUrl}/address/${value}`;
+      case "token":
+        return `${baseUrl}/token/${value}`;
+      default:
+        return baseUrl;
+    }
+  };
+
+  const openExplorerLink = (type: "tx" | "address" | "token", value: string): void => {
+    window.open(getExplorerUrl(type, value), "_blank", "noopener,noreferrer");
+  };
+
+  const getExplorableData = (result: TestResult): Array<{ type: "tx" | "address" | "token"; value: string; label: string }> => {
+    const explorableItems: Array<{ type: "tx" | "address" | "token"; value: string; label: string }> = [];
+
+    if (result.result && typeof result.result === "object") {
+      const resultObj = result.result as Record<string, unknown>;
+
+      // Transaction hash
+      if (resultObj.hash && typeof resultObj.hash === "string") {
+        explorableItems.push({ type: "tx", value: resultObj.hash, label: "View Transaction" });
+      }
+
+      // Contract address
+      if (resultObj.contract && typeof resultObj.contract === "string") {
+        explorableItems.push({ type: "token", value: resultObj.contract, label: "View Contract" });
+      }
+
+      // To address
+      if (resultObj.to && typeof resultObj.to === "string") {
+        explorableItems.push({ type: "address", value: resultObj.to, label: "View Address" });
+      }
+
+      // Address from results
+      if (resultObj.address && typeof resultObj.address === "string") {
+        explorableItems.push({ type: "address", value: resultObj.address, label: "View Address" });
+      }
+
+      // For account-related results, check for arrays of addresses
+      if (resultObj.accounts && Array.isArray(resultObj.accounts) && resultObj.accounts.length > 0) {
+        const firstAccount = resultObj.accounts[0];
+        if (typeof firstAccount === "string") {
+          explorableItems.push({ type: "address", value: firstAccount, label: "View Account" });
+        }
+      }
+    }
+
+    return explorableItems;
   };
 
   /**
@@ -743,15 +799,29 @@ export const RpcMethodTesterModal = ({ isOpen, onClose }: RpcMethodTesterModalPr
                               {new Date(result.timestamp).toLocaleTimeString()}
                             </Badge>
                           </div>
-                          {result.result !== undefined && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => copyToClipboard(safeStringify(result.result))}
-                            >
-                              <Copy className="h-3 w-3" />
-                            </Button>
-                          )}
+                          <div className="flex items-center gap-1">
+                            {getExplorableData(result).map((explorable, explorerIndex) => (
+                              <Button
+                                key={explorerIndex}
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => openExplorerLink(explorable.type, explorable.value)}
+                                className="text-xs px-2"
+                              >
+                                <ExternalLink className="h-3 w-3 mr-1" />
+                                {explorable.label}
+                              </Button>
+                            ))}
+                            {result.result !== undefined && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => copyToClipboard(safeStringify(result.result))}
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
 
                         {result.error && (
