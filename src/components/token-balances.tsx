@@ -10,7 +10,8 @@ import {
   TrendingUp, 
   AlertCircle,
   Wallet,
-  ExternalLink
+  ExternalLink,
+  Gift
 } from "lucide-react";
 import { useState } from "react";
 import { formatUnits } from "viem";
@@ -24,6 +25,7 @@ const TokenBalanceItem = ({ token, isEth = false }: TokenBalanceItemProps): JSX.
   const hasBalance = token.balance > 0n;
   const displayBalance = parseFloat(token.formattedBalance);
   const isSignificant = displayBalance > 0.001;
+  const isRewardsToken = token.symbol === "REWARDS";
 
   return (
     <div className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
@@ -31,10 +33,14 @@ const TokenBalanceItem = ({ token, isEth = false }: TokenBalanceItemProps): JSX.
         <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
           isEth 
             ? "bg-blue-100 text-blue-600" 
-            : "bg-purple-100 text-purple-600"
+            : isRewardsToken
+              ? "bg-yellow-100 text-yellow-600"
+              : "bg-purple-100 text-purple-600"
         }`}>
           {isEth ? (
             <span className="text-xs font-bold">ETH</span>
+          ) : isRewardsToken ? (
+            <Gift className="h-4 w-4" />
           ) : (
             <Coins className="h-4 w-4" />
           )}

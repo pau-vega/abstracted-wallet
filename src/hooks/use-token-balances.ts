@@ -52,6 +52,12 @@ export const SEPOLIA_TOKENS = [
     name: "Wrapped Bitcoin",
     decimals: 8,
   },
+  {
+    address: "0x118f6c0090ffd227cbefe1c6d8a803198c4422f0" as const,
+    symbol: "REWARDS",
+    name: "Rewards Token",
+    decimals: 18,
+  },
 ] as const;
 
 export interface TokenBalance {

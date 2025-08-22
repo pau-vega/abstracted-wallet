@@ -11,7 +11,7 @@ interface RewardsModalProps {
 }
 
 const TOKEN_CONTRACT = "0x118f6c0090ffd227cbefe1c6d8a803198c4422f0" as const;
-const MINT_AMOUNT = 1n * 10n ** 18n; // Start with 1 token to test
+const MINT_AMOUNT = 100n * 10n ** 18n; // 100 tokens as shown in UI
 
 export function RewardsModal({ isOpen, onClose }: RewardsModalProps) {
   const { address } = useAccount();
@@ -44,7 +44,6 @@ export function RewardsModal({ isOpen, onClose }: RewardsModalProps) {
             console.error("Failed to mint tokens:", error);
             console.error("Error details:", {
               message: error.message,
-              cause: error.cause,
               name: error.name,
             });
           },
