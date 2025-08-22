@@ -5,11 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { CheckCircle, Shield, LogOut, Copy, Gift, TestTube } from "lucide-react";
+import { CheckCircle, Shield, LogOut, Copy, Gift, TestTube, Settings } from "lucide-react";
 import { useState } from "react";
 import { RewardsModal } from "@/components/rewards-modal";
 import { SimpleTestModal } from "@/components/simple-test-modal";
 import { TokenBalances } from "@/components/token-balances";
+import { RpcMethodTester } from "@/components/rpc-method-tester";
 
 export function Account() {
   const { address, connector } = useAccount();
@@ -20,6 +21,7 @@ export function Account() {
   const [copied, setCopied] = useState(false);
   const [isRewardsModalOpen, setIsRewardsModalOpen] = useState(false);
   const [isTestModalOpen, setIsTestModalOpen] = useState(false);
+  const [showRpcTester, setShowRpcTester] = useState(false);
 
   const isPasskey = connector?.name === "Passkey";
 
@@ -95,7 +97,26 @@ export function Account() {
 
         <Separator />
 
+        {/* RPC Method Tester Section */}
+        {showRpcTester && (
+          <div className="space-y-4">
+            <RpcMethodTester />
+          </div>
+        )}
+
+        <Separator />
+
         <div className="space-y-3">
+          <Button
+            onClick={() => setShowRpcTester(!showRpcTester)}
+            variant="default"
+            size="lg"
+            className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white border-0"
+          >
+            <Settings className="mr-2 h-4 w-4" />
+            {showRpcTester ? "Hide" : "Show"} RPC Method Tester
+          </Button>
+
           <Button
             onClick={() => setIsTestModalOpen(true)}
             variant="default"
@@ -103,7 +124,7 @@ export function Account() {
             className="w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white border-0"
           >
             <TestTube className="mr-2 h-4 w-4" />
-            Test Smart Account
+            Quick Transaction Test
           </Button>
 
           <Button
