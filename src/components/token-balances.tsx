@@ -25,7 +25,7 @@ const TokenBalanceItem = ({ token, isEth = false }: TokenBalanceItemProps): JSX.
   const hasBalance = token.balance > 0n;
   const displayBalance = parseFloat(token.formattedBalance);
   const isSignificant = displayBalance > 0.001;
-  const isRewardsToken = token.symbol === "REWARDS";
+  const isRewardsToken = token.address === "0x118f6c0090ffd227cbefe1c6d8a803198c4422f0";
 
   return (
     <div className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors">

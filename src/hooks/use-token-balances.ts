@@ -1,6 +1,7 @@
 import { useAccount, useBalance, useReadContracts } from "wagmi";
 import { erc20Abi, formatUnits } from "viem";
 import { sepolia } from "wagmi/chains";
+import { useEffect, useState } from "react";
 
 // Popular tokens available on Sepolia (treating it as our main network)
 export const SEPOLIA_TOKENS = [
@@ -54,8 +55,8 @@ export const SEPOLIA_TOKENS = [
   },
   {
     address: "0x118f6c0090ffd227cbefe1c6d8a803198c4422f0" as const,
-    symbol: "REWARDS",
-    name: "Rewards Token",
+    symbol: "RWT", // Will be updated with real symbol from contract
+    name: "Reward Token", // Will be updated with real name from contract  
     decimals: 18,
   },
 ] as const;
