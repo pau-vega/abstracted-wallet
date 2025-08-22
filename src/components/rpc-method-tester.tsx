@@ -20,7 +20,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Copy, PlayCircle, CheckCircle, XCircle, AlertCircle, Loader2 } from "lucide-react";
+import { Copy, PlayCircle, CheckCircle, XCircle, AlertCircle, Loader2, Wallet, Info, Send } from "lucide-react";
 import { erc20Abi, encodeFunctionData, parseUnits } from "viem";
 import { sepolia } from "wagmi/chains";
 
@@ -401,16 +401,26 @@ export const RpcMethodTester = () => {
 
   return (
     <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <PlayCircle className="h-5 w-5" />
-          RPC Method Tester
-        </CardTitle>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Badge variant="outline">
-            Connected: {address?.slice(0, 6)}...{address?.slice(-4)}
-          </Badge>
-          <Badge variant="outline">Chain: {sepolia.name}</Badge>
+      <CardHeader className="pb-6">
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <PlayCircle className="h-6 w-6 text-primary" />
+              RPC Method Tester
+            </CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Test blockchain RPC methods with your connected wallet
+            </p>
+          </div>
+          <div className="flex flex-col gap-2">
+            <Badge variant="outline" className="text-xs">
+              <div className="w-2 h-2 bg-green-500 rounded-full mr-2" />
+              {address?.slice(0, 6)}...{address?.slice(-4)}
+            </Badge>
+            <Badge variant="secondary" className="text-xs">
+              {sepolia.name}
+            </Badge>
+          </div>
         </div>
       </CardHeader>
 
@@ -423,173 +433,273 @@ export const RpcMethodTester = () => {
             <TabsTrigger value="results">Results</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="transactions" className="space-y-4">
-            <div className="space-y-3">
-              <div>
-                <Label htmlFor="tx-type">Transaction Type</Label>
-                <div className="flex gap-2">
+          <TabsContent value="transactions" className="space-y-6">
+            <div className="space-y-4">
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="tx-type" className="text-sm font-medium">Transaction Type</Label>
+                  <Badge variant="secondary" className="text-xs">Required</Badge>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
                   <Button
                     variant={testType === "fusdt" ? "default" : "outline"}
                     onClick={() => setTestType("fusdt")}
-                    className="flex-1"
+                    className="h-12 flex flex-col gap-1"
                   >
-                    FUSDT Transfer
+                    <span className="font-medium">FUSDT</span>
+                    <span className="text-xs opacity-70">ERC20 Token</span>
                   </Button>
                   <Button
                     variant={testType === "eth" ? "default" : "outline"}
                     onClick={() => setTestType("eth")}
-                    className="flex-1"
+                    className="h-12 flex flex-col gap-1"
                   >
-                    ETH Transfer
+                    <span className="font-medium">ETH</span>
+                    <span className="text-xs opacity-70">Native Token</span>
                   </Button>
                 </div>
               </div>
 
               {/* Show current balances */}
-              <div className="bg-muted/50 rounded-lg p-3 space-y-2">
-                <div className="text-sm font-medium">Current Balances:</div>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div>
-                    ETH:{" "}
-                    {isEthBalanceLoading
-                      ? "Loading..."
-                      : ethBalanceError
-                        ? "Error"
-                        : ethBalance?.formatted
-                          ? ethBalance.formatted.slice(0, 8)
-                          : "0"}
-                    {process.env.NODE_ENV === "development" && (
-                      <span className="text-xs text-muted-foreground ml-1">
-                        (
-                        {isEthBalanceLoading
-                          ? "loading"
-                          : ethBalanceError
-                            ? "error"
-                            : ethBalance
-                              ? "loaded"
-                              : "no data"}
-                        )
-                      </span>
-                    )}
+              <div className="bg-gradient-to-r from-muted/30 to-muted/50 rounded-lg p-4 border">
+                <div className="flex items-center gap-2 mb-3">
+                  <Wallet className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">Current Balances</span>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex items-center justify-between p-2 bg-background/60 rounded">
+                    <span className="text-xs font-medium text-muted-foreground">ETH</span>
+                    <span className="text-sm font-mono">
+                      {isEthBalanceLoading ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : ethBalanceError ? (
+                        <span className="text-red-500">Error</span>
+                      ) : ethBalance?.formatted ? (
+                        ethBalance.formatted.slice(0, 8)
+                      ) : (
+                        "0"
+                      )}
+                    </span>
                   </div>
-                  <div>
-                    FUSDT:{" "}
-                    {fusdtBalance && fusdtDecimals !== undefined
-                      ? formatTokenBalance(fusdtBalance, fusdtDecimals, "").replace(" ", "").slice(0, 8)
-                      : "Loading..."}
+                  <div className="flex items-center justify-between p-2 bg-background/60 rounded">
+                    <span className="text-xs font-medium text-muted-foreground">FUSDT</span>
+                    <span className="text-sm font-mono">
+                      {fusdtBalance && fusdtDecimals !== undefined
+                        ? formatTokenBalance(fusdtBalance, fusdtDecimals, "").replace(" ", "").slice(0, 8)
+                        : <Loader2 className="h-3 w-3 animate-spin" />}
+                    </span>
                   </div>
                 </div>
               </div>
 
-              <div>
-                <Label htmlFor="amount">Amount ({testType === "fusdt" ? "FUSDT" : "ETH"})</Label>
-                <Input
-                  id="amount"
-                  value={testAmount}
-                  onChange={(e) => setTestAmount(e.target.value)}
-                  placeholder={testType === "fusdt" ? "1.0" : "0.001"}
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="amount" className="text-sm font-medium">
+                      Amount ({testType === "fusdt" ? "FUSDT" : "ETH"})
+                    </Label>
+                    <Badge variant="secondary" className="text-xs">Required</Badge>
+                  </div>
+                  <div className="relative">
+                    <Input
+                      id="amount"
+                      value={testAmount}
+                      onChange={(e) => setTestAmount(e.target.value)}
+                      placeholder={testType === "fusdt" ? "1.0" : "0.001"}
+                      className="pr-12"
+                    />
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                      <span className="text-xs text-muted-foreground font-mono">
+                        {testType === "fusdt" ? "FUSDT" : "ETH"}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Enter the amount to send
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="to-address" className="text-sm font-medium">To Address</Label>
+                    <Badge variant="outline" className="text-xs">Optional</Badge>
+                  </div>
+                  <Input
+                    id="to-address"
+                    value={testToAddress}
+                    onChange={(e) => setTestToAddress(e.target.value)}
+                    placeholder="0x... (defaults to self)"
+                    className="font-mono text-sm"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Recipient address (leave empty to send to yourself)
+                  </p>
+                </div>
               </div>
-              <div>
-                <Label htmlFor="to-address">To Address (optional - defaults to self)</Label>
-                <Input
-                  id="to-address"
-                  value={testToAddress}
-                  onChange={(e) => setTestToAddress(e.target.value)}
-                  placeholder="0x..."
-                />
-              </div>
-              <Button onClick={testSendTransaction} disabled={isSendingTx || isConfirmingTx} className="w-full">
+              <Button 
+                onClick={testSendTransaction} 
+                disabled={isSendingTx || isConfirmingTx || !testAmount} 
+                className="w-full h-12 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-medium"
+              >
                 {isSendingTx || isConfirmingTx ? (
                   <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    {isSendingTx ? "Sending..." : "Confirming..."}
+                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                    {isSendingTx ? "Sending Transaction..." : "Confirming..."}
                   </>
                 ) : (
                   <>
-                    <PlayCircle className="h-4 w-4 mr-2" />
-                    Test {testType.toUpperCase()} Transaction
+                    <Send className="h-5 w-5 mr-2" />
+                    Send {testType.toUpperCase()} Transaction
                   </>
                 )}
               </Button>
               {isTxConfirmed && (
                 <Alert className="bg-green-50 border-green-200">
-                  <CheckCircle className="h-4 w-4" />
-                  <AlertDescription>Transaction confirmed! Hash: {txHash?.slice(0, 10)}...</AlertDescription>
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <AlertDescription className="flex items-center justify-between">
+                    <span>Transaction confirmed successfully!</span>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => copyToClipboard(txHash || "")}
+                      className="h-6 text-green-700 hover:text-green-800"
+                    >
+                      <Copy className="h-3 w-3 mr-1" />
+                      Copy Hash
+                    </Button>
+                  </AlertDescription>
                 </Alert>
               )}
             </div>
           </TabsContent>
 
-          <TabsContent value="signing" className="space-y-4">
-            <div className="space-y-3">
-              <div>
-                <Label htmlFor="message">Message to Sign</Label>
+          <TabsContent value="signing" className="space-y-6">
+            <div className="space-y-4">
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="message" className="text-sm font-medium">Message to Sign</Label>
+                  <Badge variant="secondary" className="text-xs">Required</Badge>
+                </div>
                 <Textarea
                   id="message"
                   value={testMessage}
                   onChange={(e) => setTestMessage(e.target.value)}
-                  placeholder="Enter message to sign..."
-                  rows={3}
+                  placeholder="Enter your message here..."
+                  rows={4}
+                  className="resize-none"
                 />
+                <p className="text-xs text-muted-foreground">
+                  This message will be signed with your wallet's private key
+                </p>
               </div>
-              <div className="grid grid-cols-1 gap-2">
-                <Button onClick={testPersonalSign} disabled={isSigningMessage}>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <Button 
+                  onClick={testPersonalSign} 
+                  disabled={isSigningMessage || !testMessage.trim()}
+                  variant="outline"
+                  className="h-12 flex flex-col gap-1"
+                >
                   {isSigningMessage ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <PlayCircle className="h-4 w-4 mr-2" />
+                    <>
+                      <span className="font-medium">Personal Sign</span>
+                      <span className="text-xs opacity-70">Simple message signing</span>
+                    </>
                   )}
-                  Test personal_sign
                 </Button>
-                <Button onClick={testTypedDataSign} disabled={isSigningTypedData}>
+                <Button 
+                  onClick={testTypedDataSign} 
+                  disabled={isSigningTypedData}
+                  variant="outline"
+                  className="h-12 flex flex-col gap-1"
+                >
                   {isSigningTypedData ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <PlayCircle className="h-4 w-4 mr-2" />
+                    <>
+                      <span className="font-medium">Typed Data</span>
+                      <span className="text-xs opacity-70">Structured data signing</span>
+                    </>
                   )}
-                  Test eth_signTypedData_v4
                 </Button>
               </div>
             </div>
           </TabsContent>
 
-          <TabsContent value="wallet" className="space-y-4">
-            <div className="space-y-3">
-              <Button onClick={testConnectionMethods} className="w-full">
-                <PlayCircle className="h-4 w-4 mr-2" />
-                Test Connection Methods
-              </Button>
-              <Button onClick={testReadMethods} className="w-full">
-                <PlayCircle className="h-4 w-4 mr-2" />
-                Test Read Methods
-              </Button>
-              <Button onClick={testChainSwitch} disabled={isSwitchingChain} className="w-full">
+          <TabsContent value="wallet" className="space-y-6">
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <Button 
+                  onClick={testConnectionMethods} 
+                  variant="outline"
+                  className="h-14 flex flex-col gap-1"
+                >
+                  <span className="font-medium">Connection Methods</span>
+                  <span className="text-xs opacity-70">Test wallet connection info</span>
+                </Button>
+                <Button 
+                  onClick={testReadMethods} 
+                  variant="outline"
+                  className="h-14 flex flex-col gap-1"
+                >
+                  <span className="font-medium">Read Methods</span>
+                  <span className="text-xs opacity-70">Test balance and contract reads</span>
+                </Button>
+              </div>
+              
+              <Button 
+                onClick={testChainSwitch} 
+                disabled={isSwitchingChain} 
+                variant="outline"
+                className="w-full h-12"
+              >
                 {isSwitchingChain ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Switching Chain...
+                  </>
                 ) : (
-                  <PlayCircle className="h-4 w-4 mr-2" />
+                  <>
+                    <PlayCircle className="h-4 w-4 mr-2" />
+                    Test Chain Switch to Sepolia
+                  </>
                 )}
-                Test Chain Switch
               </Button>
+              
               <Separator />
-              <div>
-                <Label htmlFor="erc20-address">ERC20 Contract Address</Label>
+              
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="erc20-address" className="text-sm font-medium">ERC20 Contract Address</Label>
+                  <Badge variant="outline" className="text-xs">Optional</Badge>
+                </div>
                 <Input
                   id="erc20-address"
                   value={erc20Address}
                   onChange={(e) => setErc20Address(e.target.value)}
-                  placeholder="0x..."
+                  placeholder="0x... (custom ERC20 token address)"
+                  className="font-mono text-sm"
                 />
+                <p className="text-xs text-muted-foreground">
+                  Enter a custom ERC20 token address to test balance reading
+                </p>
               </div>
             </div>
           </TabsContent>
 
           <TabsContent value="results" className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="font-medium">Test Results ({testResults.length})</h3>
-              <Button variant="outline" size="sm" onClick={clearResults}>
-                Clear Results
+            <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border">
+              <div className="flex items-center gap-2">
+                <Info className="h-4 w-4 text-muted-foreground" />
+                <h3 className="font-medium">Test Results</h3>
+                <Badge variant="secondary" className="text-xs">
+                  {testResults.length} {testResults.length === 1 ? 'result' : 'results'}
+                </Badge>
+              </div>
+              <Button variant="outline" size="sm" onClick={clearResults} disabled={testResults.length === 0}>
+                Clear All
               </Button>
             </div>
 
