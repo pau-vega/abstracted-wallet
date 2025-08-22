@@ -5,13 +5,36 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Coins, RefreshCw, TrendingUp, AlertCircle, Wallet } from "lucide-react";
+import { Coins, RefreshCw, TrendingUp, AlertCircle, Wallet, ExternalLink } from "lucide-react";
 import { useState } from "react";
+import { useChainId } from "wagmi";
+import { sepolia } from "wagmi/chains";
 
 interface TokenBalanceItemProps {
   readonly token: TokenBalance;
   readonly isEth?: boolean;
 }
+
+/**
+ * Get the explorer URL for a token address based on the chain
+ */
+const getExplorerUrl = (chainId: number, address: string, isEth: boolean = false): string => {
+  const baseUrl = (() => {
+    switch (chainId) {
+      case sepolia.id:
+        return "https://sepolia.etherscan.io";
+      case 1: // Mainnet
+        return "https://etherscan.io";
+      default:
+        return "https://sepolia.etherscan.io"; // Fallback to Sepolia
+    }
+  })();
+
+  if (isEth) {
+    return `${baseUrl}/address/${address}`;
+  }
+  return `${baseUrl}/token/${address}`;
+};
 
 /**
  * Formats a balance number for display with appropriate precision and large number formatting
@@ -81,10 +104,12 @@ const formatBalanceDisplay = (formattedBalance: string): { display: string; exac
 };
 
 const TokenBalanceItem = ({ token, isEth = false }: TokenBalanceItemProps) => {
+  const chainId = useChainId();
   const hasBalance = token.balance > 0n;
   // Note: Removed isRewardsToken logic - treat all tokens as regular tokens
 
   const { display: formattedDisplay, exact: exactValue } = formatBalanceDisplay(token.formattedBalance);
+  const explorerUrl = getExplorerUrl(chainId, token.address, isEth);
 
   return (
     <div className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
@@ -97,7 +122,7 @@ const TokenBalanceItem = ({ token, isEth = false }: TokenBalanceItemProps) => {
           {isEth ? <span className="text-xs font-bold">ETH</span> : <Coins className="h-4 w-4" />}
         </div>
 
-        <div>
+        <div className="flex-1">
           <div className="flex items-center space-x-2">
             <span className="font-medium">{token.symbol}</span>
             {hasBalance && (
@@ -107,7 +132,24 @@ const TokenBalanceItem = ({ token, isEth = false }: TokenBalanceItemProps) => {
               </Badge>
             )}
           </div>
-          <p className="text-sm text-muted-foreground">{token.name}</p>
+          <div className="flex items-center space-x-2">
+            <p className="text-sm text-muted-foreground">{token.name}</p>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                  onClick={() => window.open(explorerUrl, "_blank", "noopener,noreferrer")}
+                >
+                  <ExternalLink className="h-3 w-3" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>View on {isEth ? "Etherscan" : "Explorer"}</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
         </div>
       </div>
 
