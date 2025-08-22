@@ -1,26 +1,38 @@
-import { useWriteContract, useWaitForTransactionReceipt, useAccount, useReadContract } from "wagmi";
+import { useWriteContract, useWaitForTransactionReceipt, useAccount, useReadContract, useChainId } from "wagmi";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Gift, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import { USDT_ABI } from "@/constants";
 import { erc20Abi, parseUnits } from "viem";
+import { sepolia, holesky } from "wagmi/chains";
 
 interface RewardsModalProps {
   readonly isOpen: boolean;
   readonly onClose: () => void;
 }
 
-const TOKEN_CONTRACT = "0x118f6c0090ffd227cbefe1c6d8a803198c4422f0" as const;
+// Network-specific FUSDT contract addresses
+const NETWORK_TOKEN_CONTRACTS = {
+  [sepolia.id]: "0x118f6c0090ffd227cbefe1c6d8a803198c4422f0" as const, // FUSDT on Sepolia
+  [holesky.id]: null, // No FUSDT contract available on Holešky yet
+} as const;
 
 export function RewardsModal({ isOpen, onClose }: RewardsModalProps) {
   const { address } = useAccount();
+  const chainId = useChainId();
+
+  // Get the token contract for the current network
+  const tokenContract = NETWORK_TOKEN_CONTRACTS[chainId as keyof typeof NETWORK_TOKEN_CONTRACTS];
 
   // Read the token decimals from the contract
   const { data: tokenDecimals } = useReadContract({
-    address: TOKEN_CONTRACT,
+    address: tokenContract || undefined,
     abi: erc20Abi,
     functionName: "decimals",
+    query: {
+      enabled: !!tokenContract, // Only fetch if token contract exists for this network
+    },
   });
 
   const { writeContract, data: hash, error, isPending } = useWriteContract();
@@ -32,6 +44,11 @@ export function RewardsModal({ isOpen, onClose }: RewardsModalProps) {
   const handleMint = async (): Promise<void> => {
     if (!address) {
       console.error("No wallet address found");
+      return;
+    }
+
+    if (!tokenContract) {
+      console.error("No token contract available for this network");
       return;
     }
 
@@ -49,7 +66,7 @@ export function RewardsModal({ isOpen, onClose }: RewardsModalProps) {
 
       writeContract(
         {
-          address: TOKEN_CONTRACT,
+          address: tokenContract,
           abi: USDT_ABI,
           functionName: "mint",
           args: [address, mintAmount],
@@ -114,11 +131,23 @@ export function RewardsModal({ isOpen, onClose }: RewardsModalProps) {
       };
     }
 
+    if (!tokenContract) {
+      return {
+        icon: <AlertCircle className="h-8 w-8 text-amber-500" />,
+        title: "Rewards Not Available",
+        description: "Token rewards are not available on this network. Switch to Sepolia to claim FUSDT tokens.",
+        buttonText: "Switch to Sepolia",
+        buttonVariant: "secondary" as const,
+        onButtonClick: () => {}, // Could add chain switch functionality here
+        disabled: true,
+      };
+    }
+
     return {
       icon: <Gift className="h-8 w-8 text-blue-500" />,
       title: "Claim Your Rewards",
-      description: "Mint 100 tokens to your wallet as a reward for using our app!",
-      buttonText: tokenDecimals ? "Mint 100 Tokens" : "Loading...",
+      description: "Mint 100 FUSDT tokens to your wallet as a reward for using our app!",
+      buttonText: tokenDecimals ? "Mint 100 FUSDT" : "Loading...",
       buttonVariant: "default" as const,
       onButtonClick: handleMint,
       disabled: !tokenDecimals,
@@ -143,7 +172,7 @@ export function RewardsModal({ isOpen, onClose }: RewardsModalProps) {
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Token Contract</span>
               <Badge variant="secondary" className="font-mono text-xs">
-                {TOKEN_CONTRACT.slice(0, 6)}...{TOKEN_CONTRACT.slice(-4)}
+                {tokenContract ? `${tokenContract.slice(0, 6)}...${tokenContract.slice(-4)}` : "N/A"}
               </Badge>
             </div>
             <div className="flex items-center justify-between">

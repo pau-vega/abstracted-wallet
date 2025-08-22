@@ -1,23 +1,41 @@
 import { useAccount, useBalance, useReadContracts, useChainId } from "wagmi";
 import { erc20Abi, formatUnits } from "viem";
+import { sepolia, holesky } from "wagmi/chains";
 
 /**
- * Tokens to load balances for
+ * Network-specific tokens to load balances for
  *
  * To add a new token:
- * 1. Add the token contract address to this array
+ * 1. Add the token contract address to the appropriate network object
  * 2. The hook will automatically fetch name, symbol, decimals, and balance from the contract
  *
  * Example:
- * const TOKENS_TO_LOAD = [
- *   "0x118f6C0090ffd227CbeFE1C6d8A803198c4422F0", // FUSDT
- *   "0xA0b86a33E6441e4A52B3A8E0B80F4b9b1b6C8F2D", // Your new token
- * ] as const;
+ * const NETWORK_TOKENS = {
+ *   [sepolia.id]: [
+ *     "0x118f6C0090ffd227CbeFE1C6d8A803198c4422F0", // FUSDT on Sepolia
+ *     "0xYourNewTokenAddressOnSepolia",
+ *   ],
+ *   [holesky.id]: [
+ *     "0xHoleskyFUSDTAddress", // FUSDT on Holešky
+ *     "0xYourNewTokenAddressOnHolesky",
+ *   ],
+ * } as const;
  */
-const TOKENS_TO_LOAD = [
-  "0x118f6C0090ffd227CbeFE1C6d8A803198c4422F0", // FUSDT
-  // Add more token addresses here as needed
-] as const;
+const NETWORK_TOKENS = {
+  [sepolia.id]: [
+    "0x118f6C0090ffd227CbeFE1C6d8A803198c4422F0", // FUSDT on Sepolia
+    // Add more Sepolia tokens here
+  ],
+  [holesky.id]: [
+    // TODO: Add actual FUSDT contract address for Holešky testnet
+    // You can either:
+    // 1. Deploy your own FUSDT contract on Holešky
+    // 2. Find an existing FUSDT-like token on Holešky testnet
+    // 3. Use a different test token available on Holešky
+    // For now, no tokens are loaded for Holešky (empty array means only ETH balance will be shown)
+    // Example: "0xYourFUSDTContractOnHolesky",
+  ],
+} as const;
 
 export interface TokenBalance {
   readonly address: `0x${string}`;
@@ -37,7 +55,7 @@ export interface UseTokenBalancesReturn {
     readonly isLoading: boolean;
     readonly error: Error | null;
   };
-  readonly tokenBalances: readonly TokenBalance[]; // Array of all loaded tokens (currently just FUSDT)
+  readonly tokenBalances: readonly TokenBalance[]; // Array of all loaded tokens for the current network
   readonly isLoading: boolean;
   readonly hasError: boolean;
   readonly refetch: () => void;
@@ -49,6 +67,9 @@ export interface UseTokenBalancesReturn {
 export const useTokenBalances = (): UseTokenBalancesReturn => {
   const { address } = useAccount();
   const chainId = useChainId();
+
+  // Get tokens for the current network
+  const tokensToLoad = NETWORK_TOKENS[chainId as keyof typeof NETWORK_TOKENS] || [];
 
   // Fetch ETH balance
   const {
@@ -62,7 +83,7 @@ export const useTokenBalances = (): UseTokenBalancesReturn => {
   });
 
   // Create contracts for all tokens (balance + metadata for each)
-  const tokenContracts = TOKENS_TO_LOAD.flatMap((tokenAddress) => [
+  const tokenContracts = tokensToLoad.flatMap((tokenAddress) => [
     {
       address: tokenAddress,
       abi: erc20Abi,
@@ -112,7 +133,7 @@ export const useTokenBalances = (): UseTokenBalancesReturn => {
   };
 
   // Process token balances and metadata
-  const tokenBalances: TokenBalance[] = TOKENS_TO_LOAD.map((tokenAddress, index) => {
+  const tokenBalances: TokenBalance[] = tokensToLoad.map((tokenAddress, index) => {
     if (!tokenData) {
       return {
         address: tokenAddress,
