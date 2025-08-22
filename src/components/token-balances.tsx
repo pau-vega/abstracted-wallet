@@ -158,6 +158,9 @@ export const TokenBalances = () => {
   // Filter to only show tokens with balance > 0
   const tokensWithBalance = tokenBalances.filter((token) => token.balance > 0n);
   const hasEthBalance = ethBalance.balance > 0n;
+  
+  // Always show ETH (even with zero balance) but only show tokens with balance > 0
+  const totalTokenCount = tokensWithBalance.length + 1; // +1 for ETH
 
   return (
     <TooltipProvider>
@@ -169,15 +172,11 @@ export const TokenBalances = () => {
           </div>
 
           <div className="flex items-center space-x-2">
-            {(hasEthBalance || tokensWithBalance.length > 0) && (
-              <Badge variant="outline" className="text-xs">
-                {hasEthBalance && tokensWithBalance.length > 0
-                  ? `ETH + ${tokensWithBalance.length} tokens`
-                  : hasEthBalance
-                    ? "ETH only"
-                    : `${tokensWithBalance.length} tokens`}
-              </Badge>
-            )}
+            <Badge variant="outline" className="text-xs">
+              {tokensWithBalance.length > 0
+                ? `${totalTokenCount} tokens`
+                : "1 token"}
+            </Badge>
 
             <Button
               variant="ghost"
@@ -201,22 +200,20 @@ export const TokenBalances = () => {
             </Alert>
           )}
 
-          {/* ETH Balance - only show if user has ETH */}
-          {hasEthBalance && (
-            <TokenBalanceItem
-              token={{
-                address: "0x0000000000000000000000000000000000000000" as const,
-                symbol: "ETH",
-                name: "Ethereum",
-                decimals: 18,
-                balance: ethBalance.balance,
-                formattedBalance: ethBalance.formattedBalance,
-                isLoading: ethBalance.isLoading,
-                error: ethBalance.error,
-              }}
-              isEth={true}
-            />
-          )}
+          {/* ETH Balance - always show */}
+          <TokenBalanceItem
+            token={{
+              address: "0x0000000000000000000000000000000000000000" as const,
+              symbol: "ETH",
+              name: "Ethereum",
+              decimals: 18,
+              balance: ethBalance.balance,
+              formattedBalance: ethBalance.formattedBalance,
+              isLoading: ethBalance.isLoading,
+              error: ethBalance.error,
+            }}
+            isEth={true}
+          />
 
           {/* Token Balances - only show tokens with balance > 0 */}
           {tokensWithBalance.length > 0 && (
@@ -227,12 +224,10 @@ export const TokenBalances = () => {
             </div>
           )}
 
-          {/* Empty State */}
-          {!isLoading && !hasEthBalance && tokensWithBalance.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">
-              <Coins className="h-12 w-12 mx-auto mb-3 opacity-50" />
-              <p className="text-sm">No token balances found</p>
-              <p className="text-xs mt-1">Your account doesn't have any ETH or tokens yet</p>
+          {/* Empty State - only show if we have absolutely no tokens beyond ETH */}
+          {!isLoading && tokensWithBalance.length === 0 && !hasEthBalance && (
+            <div className="text-center py-4 text-muted-foreground">
+              <p className="text-xs mt-1">No additional tokens found beyond ETH</p>
             </div>
           )}
         </CardContent>

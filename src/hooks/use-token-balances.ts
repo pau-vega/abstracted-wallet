@@ -1,4 +1,4 @@
-import { useAccount, useBalance, useReadContracts } from "wagmi";
+import { useAccount, useBalance, useReadContracts, useChainId } from "wagmi";
 import { erc20Abi, formatUnits } from "viem";
 import { sepolia } from "wagmi/chains";
 
@@ -89,6 +89,7 @@ export interface UseTokenBalancesReturn {
  */
 export const useTokenBalances = (): UseTokenBalancesReturn => {
   const { address } = useAccount();
+  const chainId = useChainId();
 
   // Fetch ETH balance
   const {
@@ -98,7 +99,7 @@ export const useTokenBalances = (): UseTokenBalancesReturn => {
     refetch: refetchEth,
   } = useBalance({
     address,
-    chainId: sepolia.id,
+    chainId,
   });
 
   // Prepare contracts for token balance calls
@@ -107,7 +108,7 @@ export const useTokenBalances = (): UseTokenBalancesReturn => {
     abi: erc20Abi,
     functionName: "balanceOf" as const,
     args: [address!],
-    chainId: sepolia.id,
+    chainId,
   }));
 
   // Prepare contracts to fetch metadata for ALL tokens (to get real name/symbol/decimals)
@@ -116,19 +117,19 @@ export const useTokenBalances = (): UseTokenBalancesReturn => {
       address: token.address,
       abi: erc20Abi,
       functionName: "name" as const,
-      chainId: sepolia.id,
+      chainId,
     },
     {
       address: token.address,
       abi: erc20Abi,
       functionName: "symbol" as const,
-      chainId: sepolia.id,
+      chainId,
     },
     {
       address: token.address,
       abi: erc20Abi,
       functionName: "decimals" as const,
-      chainId: sepolia.id,
+      chainId,
     },
   ]);
 
