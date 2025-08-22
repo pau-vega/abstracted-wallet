@@ -58,7 +58,10 @@ export const RpcMethodTester = () => {
   const { isLoading: isConfirmingTx, isSuccess: isTxConfirmed } = useWaitForTransactionReceipt({ hash: txHash });
 
   // Read operations
-  const { data: ethBalance } = useBalance({ address });
+  const { data: ethBalance, isLoading: isEthBalanceLoading, error: ethBalanceError } = useBalance({ 
+    address,
+    query: { enabled: !!address && isConnected }
+  });
 
   // FUSDT token data
   const { data: fusdtBalance } = useReadContract({
@@ -442,12 +445,29 @@ export const RpcMethodTester = () => {
               <div className="bg-muted/50 rounded-lg p-3 space-y-2">
                 <div className="text-sm font-medium">Current Balances:</div>
                 <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div>ETH: {ethBalance?.formatted.slice(0, 8) || "0"}</div>
+                  <div>
+                    ETH: {isEthBalanceLoading 
+                      ? "Loading..." 
+                      : ethBalanceError 
+                      ? "Error" 
+                      : ethBalance?.formatted 
+                      ? ethBalance.formatted.slice(0, 8) 
+                      : "0"}
+                    {process.env.NODE_ENV === "development" && (
+                      <span className="text-xs text-muted-foreground ml-1">
+                        (
+                        {isEthBalanceLoading ? "loading" : 
+                         ethBalanceError ? "error" : 
+                         ethBalance ? "loaded" : "no data"}
+                        )
+                      </span>
+                    )}
+                  </div>
                   <div>
                     FUSDT:{" "}
                     {fusdtBalance && fusdtDecimals !== undefined
                       ? formatTokenBalance(fusdtBalance, fusdtDecimals, "").replace(" ", "").slice(0, 8)
-                      : "0"}
+                      : "Loading..."}
                   </div>
                 </div>
               </div>
