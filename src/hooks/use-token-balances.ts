@@ -1,6 +1,6 @@
 import { useAccount, useBalance, useReadContracts, useChainId } from "wagmi";
 import { erc20Abi, formatUnits } from "viem";
-import { sepolia, holesky } from "wagmi/chains";
+import { sepolia, polygonAmoy } from "wagmi/chains";
 
 /**
  * Network-specific tokens to load balances for
@@ -15,9 +15,9 @@ import { sepolia, holesky } from "wagmi/chains";
  *     "0x118f6C0090ffd227CbeFE1C6d8A803198c4422F0", // FUSDT on Sepolia
  *     "0xYourNewTokenAddressOnSepolia",
  *   ],
- *   [holesky.id]: [
- *     "0xHoleskyFUSDTAddress", // FUSDT on Holešky
- *     "0xYourNewTokenAddressOnHolesky",
+ *   [polygonAmoy.id]: [
+ *     "0xPolygonAmoyFUSDTAddress", // FUSDT on Polygon Amoy
+ *     "0xYourNewTokenAddressOnPolygonAmoy",
  *   ],
  * } as const;
  */
@@ -26,14 +26,14 @@ const NETWORK_TOKENS = {
     "0x118f6C0090ffd227CbeFE1C6d8A803198c4422F0", // FUSDT on Sepolia
     // Add more Sepolia tokens here
   ],
-  [holesky.id]: [
-    // TODO: Add actual FUSDT contract address for Holešky testnet
+  [polygonAmoy.id]: [
+    "0xb23a245be0517938aed10a95cc8d7300a7d93db1", // Token on Polygon Amoy
+    // TODO: Add more token contract addresses for Polygon Amoy testnet
     // You can either:
-    // 1. Deploy your own FUSDT contract on Holešky
-    // 2. Find an existing FUSDT-like token on Holešky testnet
-    // 3. Use a different test token available on Holešky
-    // For now, no tokens are loaded for Holešky (empty array means only ETH balance will be shown)
-    // Example: "0xYourFUSDTContractOnHolesky",
+    // 1. Deploy your own FUSDT contract on Polygon Amoy
+    // 2. Find existing test tokens on Polygon Amoy testnet
+    // 3. Use different test tokens available on Polygon Amoy
+    // Example: "0xYourFUSDTContractOnPolygonAmoy",
   ],
 } as const;
 

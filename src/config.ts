@@ -1,5 +1,5 @@
 import { createConfig, http } from "wagmi";
-import { sepolia, holesky } from "wagmi/chains";
+import { sepolia, polygonAmoy } from "wagmi/chains";
 import { passkeysWalletConnector } from "@/connectors/passkeys-connector";
 import { createStorage } from "wagmi";
 
@@ -7,7 +7,7 @@ import { createStorage } from "wagmi";
 const ZERODEV_PROJECT_ID = import.meta.env.VITE_ZERODEV_PROJECT_ID;
 
 export const config = createConfig({
-  chains: [sepolia, holesky], // Sepolia as default, Holešky as alternative
+  chains: [sepolia, polygonAmoy], // Sepolia as default, Polygon Amoy as alternative
   connectors: [
     passkeysWalletConnector({
       projectId: ZERODEV_PROJECT_ID,
@@ -17,7 +17,7 @@ export const config = createConfig({
   ],
   transports: {
     [sepolia.id]: http("https://eth-sepolia.g.alchemy.com/v2/8SAu08b803dIxRZ1WEhVYX02aiVRkQHX"),
-    [holesky.id]: http("https://ethereum-holesky-rpc.publicnode.com"),
+    [polygonAmoy.id]: http("https://rpc-amoy.polygon.technology"),
   },
   // Enable session persistence with localStorage
   storage: createStorage({

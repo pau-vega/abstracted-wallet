@@ -5,17 +5,17 @@ import { Badge } from "@/components/ui/badge";
 import { Gift, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import { USDT_ABI } from "@/constants";
 import { erc20Abi, parseUnits } from "viem";
-import { sepolia, holesky } from "wagmi/chains";
+import { sepolia, polygonAmoy } from "wagmi/chains";
 
 interface RewardsModalProps {
   readonly isOpen: boolean;
   readonly onClose: () => void;
 }
 
-// Network-specific FUSDT contract addresses
+// Network-specific token contract addresses
 const NETWORK_TOKEN_CONTRACTS = {
   [sepolia.id]: "0x118f6c0090ffd227cbefe1c6d8a803198c4422f0" as const, // FUSDT on Sepolia
-  [holesky.id]: null, // No FUSDT contract available on Holešky yet
+  [polygonAmoy.id]: "0xb23a245be0517938aed10a95cc8d7300a7d93db1" as const, // Token on Polygon Amoy
 } as const;
 
 export function RewardsModal({ isOpen, onClose }: RewardsModalProps) {
@@ -135,7 +135,7 @@ export function RewardsModal({ isOpen, onClose }: RewardsModalProps) {
       return {
         icon: <AlertCircle className="h-8 w-8 text-amber-500" />,
         title: "Rewards Not Available",
-        description: "Token rewards are not available on this network. Switch to Sepolia to claim FUSDT tokens.",
+        description: "Token rewards are not available on this network. Switch to Sepolia or Polygon Amoy to claim tokens.",
         buttonText: "Switch to Sepolia",
         buttonVariant: "secondary" as const,
         onButtonClick: () => {}, // Could add chain switch functionality here
@@ -146,8 +146,8 @@ export function RewardsModal({ isOpen, onClose }: RewardsModalProps) {
     return {
       icon: <Gift className="h-8 w-8 text-blue-500" />,
       title: "Claim Your Rewards",
-      description: "Mint 100 FUSDT tokens to your wallet as a reward for using our app!",
-      buttonText: tokenDecimals ? "Mint 100 FUSDT" : "Loading...",
+      description: "Mint 100 tokens to your wallet as a reward for using our app!",
+      buttonText: tokenDecimals ? "Mint 100 Tokens" : "Loading...",
       buttonVariant: "default" as const,
       onButtonClick: handleMint,
       disabled: !tokenDecimals,

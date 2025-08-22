@@ -23,7 +23,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Copy, PlayCircle, CheckCircle, XCircle, AlertCircle, Loader2, Wallet, Info, Send, ExternalLink } from "lucide-react";
 import { erc20Abi, encodeFunctionData, parseUnits } from "viem";
-import { sepolia, holesky } from "wagmi/chains";
+import { sepolia, polygonAmoy } from "wagmi/chains";
 
 interface RpcMethodTesterModalProps {
   readonly isOpen: boolean;
@@ -134,8 +134,8 @@ export const RpcMethodTesterModal = ({ isOpen, onClose }: RpcMethodTesterModalPr
   };
 
   const getExplorerUrl = (type: "tx" | "address" | "token", value: string): string => {
-    const baseUrl = chainId === holesky.id 
-      ? "https://holesky.etherscan.io" 
+    const baseUrl = chainId === polygonAmoy.id 
+      ? "https://amoy.polygonscan.com" 
       : "https://sepolia.etherscan.io";
     switch (type) {
       case "tx":
@@ -342,8 +342,8 @@ export const RpcMethodTesterModal = ({ isOpen, onClose }: RpcMethodTesterModalPr
   const testChainSwitch = async (): Promise<void> => {
     try {
       addTestResult("wallet_switchEthereumChain", "pending");
-      // Switch to the other network (if on Sepolia, switch to Holešky, and vice versa)
-      const targetChain = chainId === sepolia.id ? holesky : sepolia;
+      // Switch to the other network (if on Sepolia, switch to Polygon Amoy, and vice versa)
+      const targetChain = chainId === sepolia.id ? polygonAmoy : sepolia;
       await switchChain({ chainId: targetChain.id });
       addTestResult("wallet_switchEthereumChain", "success", { 
         chainId: targetChain.id, 
@@ -746,7 +746,7 @@ export const RpcMethodTesterModal = ({ isOpen, onClose }: RpcMethodTesterModalPr
                     ) : (
                       <>
                         <PlayCircle className="h-4 w-4 mr-2" />
-                        Switch to {chainId === sepolia.id ? holesky.name : sepolia.name}
+                        Switch to {chainId === sepolia.id ? polygonAmoy.name : sepolia.name}
                       </>
                     )}
                   </Button>
