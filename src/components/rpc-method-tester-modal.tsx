@@ -35,6 +35,10 @@ import {
 } from "lucide-react";
 import { erc20Abi, encodeFunctionData, parseUnits } from "viem";
 import { sepolia, polygonAmoy } from "wagmi/chains";
+import { useGasEstimation } from "@/hooks/use-gas-estimation";
+import { GasEstimationDisplay } from "@/components/gas-estimation-display";
+import { toast } from "sonner";
+import { openExplorerLink as utilOpenExplorerLink } from "@/utils/explorer-links";
 
 interface RpcMethodTesterModalProps {
   readonly isOpen: boolean;
@@ -67,6 +71,12 @@ export const RpcMethodTesterModal = ({ isOpen, onClose }: RpcMethodTesterModalPr
   const [testType, setTestType] = useState<"eth" | "fusdt">("fusdt");
   const [fusdtAddress] = useState("0x118f6c0090ffd227cbefe1c6d8a803198c4422f0"); // FUSDT (Rewards token) on Sepolia
   const [erc20Address, setErc20Address] = useState("0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238"); // USDC on Sepolia
+
+  // Loading states for better user feedback
+  const [isTestingConnection, setIsTestingConnection] = useState(false);
+  const [isTestingRead, setIsTestingRead] = useState(false);
+  const [isTestingPersonalSign, setIsTestingPersonalSign] = useState(false);
+  const [isTestingTypedData, setIsTestingTypedData] = useState(false);
 
   // Hooks for different operations
   const { signMessage, isPending: isSigningMessage } = useSignMessage();
@@ -110,6 +120,57 @@ export const RpcMethodTesterModal = ({ isOpen, onClose }: RpcMethodTesterModalPr
     functionName: "decimals",
   });
 
+  // Helper function to get appropriate wallet name
+  const getWalletName = (): string => {
+    if (!connector) return "wallet";
+
+    // Check for passkeys connector
+    if (connector.id === "passkeys") {
+      return "passkeys wallet";
+    }
+
+    // Check for MetaMask
+    if (connector.id === "metaMask") {
+      return "MetaMask";
+    }
+
+    // Check for other common connectors
+    if (connector.id === "walletConnect") {
+      return "WalletConnect";
+    }
+
+    if (connector.id === "coinbaseWallet") {
+      return "Coinbase Wallet";
+    }
+
+    if (connector.id === "injected") {
+      return "browser wallet";
+    }
+
+    if (connector.id === "rainbow") {
+      return "Rainbow Wallet";
+    }
+
+    if (connector.id === "trust") {
+      return "Trust Wallet";
+    }
+
+    if (connector.id === "imToken") {
+      return "imToken";
+    }
+
+    if (connector.id === "argent") {
+      return "Argent";
+    }
+
+    if (connector.id === "brave") {
+      return "Brave Wallet";
+    }
+
+    // Fallback to connector name or generic "wallet"
+    return connector.name || "wallet";
+  };
+
   const addTestResult = (method: string, status: TestResult["status"], result?: unknown, error?: string): void => {
     const newResult: TestResult = {
       method,
@@ -142,24 +203,6 @@ export const RpcMethodTesterModal = ({ isOpen, onClose }: RpcMethodTesterModalPr
     } catch (err) {
       console.error("Failed to copy:", err);
     }
-  };
-
-  const getExplorerUrl = (type: "tx" | "address" | "token", value: string): string => {
-    const baseUrl = chainId === polygonAmoy.id ? "https://amoy.polygonscan.com" : "https://sepolia.etherscan.io";
-    switch (type) {
-      case "tx":
-        return `${baseUrl}/tx/${value}`;
-      case "address":
-        return `${baseUrl}/address/${value}`;
-      case "token":
-        return `${baseUrl}/token/${value}`;
-      default:
-        return baseUrl;
-    }
-  };
-
-  const openExplorerLink = (type: "tx" | "address" | "token", value: string): void => {
-    window.open(getExplorerUrl(type, value), "_blank", "noopener,noreferrer");
   };
 
   const getExplorableData = (
@@ -215,6 +258,51 @@ export const RpcMethodTesterModal = ({ isOpen, onClose }: RpcMethodTesterModalPr
     return parseUnits(amount, 18); // Default fallback
   };
 
+  // Gas estimation for transactions
+  const transactionData = (() => {
+    if (!testAmount || (!testToAddress && !address)) return undefined;
+
+    const to = testToAddress || address;
+    if (!to) return undefined;
+
+    try {
+      if (testType === "eth") {
+        return {
+          to: to as `0x${string}`,
+          value: parseTokenAmount(testAmount, "eth"),
+          data: undefined as `0x${string}` | undefined,
+        };
+      } else {
+        // FUSDT transfer - only proceed if decimals are loaded
+        if (!fusdtDecimals) return undefined;
+
+        const amount = parseTokenAmount(testAmount, "fusdt");
+        const data = encodeFunctionData({
+          abi: erc20Abi,
+          functionName: "transfer",
+          args: [to as `0x${string}`, amount],
+        });
+
+        return {
+          to: fusdtAddress as `0x${string}`,
+          value: 0n,
+          data,
+        };
+      }
+    } catch (error) {
+      // If there's an error parsing the amount, return undefined
+      console.warn("Error preparing transaction data:", error);
+      return undefined;
+    }
+  })();
+
+  const gasEstimation = useGasEstimation({
+    to: transactionData?.to,
+    value: transactionData?.value,
+    data: transactionData?.data,
+    enabled: isOpen && !!address && !!testAmount && (!!testToAddress || !!address) && !!transactionData,
+  });
+
   /**
    * Format token balance from raw BigInt to human-readable string
    */
@@ -231,52 +319,66 @@ export const RpcMethodTesterModal = ({ isOpen, onClose }: RpcMethodTesterModalPr
 
   // Test Methods
   const testPersonalSign = async (): Promise<void> => {
-    if (!testMessage.trim()) {
-      addTestResult("personal_sign", "error", undefined, "Message cannot be empty");
-      return;
-    }
-
     try {
+      setIsTestingPersonalSign(true);
       addTestResult("personal_sign", "pending");
       const signature = await signMessage({ message: testMessage });
-      addTestResult("personal_sign", "success", { message: testMessage, signature });
+      addTestResult("personal_sign", "success", {
+        message: testMessage,
+        signature,
+        signer: address,
+      });
+      toast.success("Message signed successfully!");
     } catch (error) {
-      addTestResult("personal_sign", "error", undefined, error instanceof Error ? error.message : "Unknown error");
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      addTestResult("personal_sign", "error", undefined, errorMessage);
+    } finally {
+      setIsTestingPersonalSign(false);
     }
   };
 
   const testTypedDataSign = async (): Promise<void> => {
-    const typedData = {
-      domain: {
-        name: "Passkeys RPC Tester",
-        version: "1",
-        chainId,
-        verifyingContract: "0x0000000000000000000000000000000000000000" as `0x${string}`,
-      },
-      types: {
-        TestMessage: [
-          { name: "content", type: "string" },
-          { name: "timestamp", type: "uint256" },
-        ],
-      },
-      primaryType: "TestMessage" as const,
-      message: {
-        content: "This is a test typed data message",
-        timestamp: BigInt(Math.floor(Date.now() / 1000)),
-      },
-    };
-
     try {
+      setIsTestingTypedData(true);
       addTestResult("eth_signTypedData_v4", "pending");
-      const signature = await signTypedData(typedData);
-      addTestResult("eth_signTypedData_v4", "success", { typedData, signature });
+      const typedData = {
+        types: {
+          Person: [
+            { name: "name", type: "string" },
+            { name: "wallet", type: "address" },
+          ],
+        },
+        primaryType: "Person" as const,
+        domain: {
+          name: "Test App",
+          version: "1",
+          chainId: chainId,
+          verifyingContract: "0x0000000000000000000000000000000000000000" as `0x${string}`,
+        },
+        message: {
+          name: "Test User",
+          wallet: address,
+        },
+      };
+
+      const signature = await signTypedData({
+        domain: typedData.domain,
+        types: typedData.types,
+        primaryType: typedData.primaryType,
+        message: typedData.message,
+      });
+
+      addTestResult("eth_signTypedData_v4", "success", {
+        typedData,
+        signature,
+        signer: address,
+      });
+      toast.success("Typed data signed successfully!");
     } catch (error) {
-      addTestResult(
-        "eth_signTypedData_v4",
-        "error",
-        undefined,
-        error instanceof Error ? error.message : "Unknown error",
-      );
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      addTestResult("eth_signTypedData_v4", "error", undefined, errorMessage);
+    } finally {
+      setIsTestingTypedData(false);
     }
   };
 
@@ -293,9 +395,24 @@ export const RpcMethodTesterModal = ({ isOpen, onClose }: RpcMethodTesterModalPr
 
       if (testType === "eth") {
         // Send ETH
-        const value = parseTokenAmount(testAmount, "eth");
+        const value = parseUnits(testAmount, ethDecimals);
+        const gasParams = gasEstimation.selected.maxFeePerGas
+          ? {
+              gas: gasEstimation.selected.gasLimit,
+              maxFeePerGas: gasEstimation.selected.maxFeePerGas,
+              maxPriorityFeePerGas: gasEstimation.selected.maxPriorityFeePerGas,
+            }
+          : {
+              gas: gasEstimation.selected.gasLimit,
+              gasPrice: gasEstimation.selected.gasPrice,
+            };
+
         sendTransaction(
-          { to: to as `0x${string}`, value },
+          {
+            to: to as `0x${string}`,
+            value,
+            ...gasParams,
+          },
           {
             onSuccess: (hash) => {
               addTestResult("eth_sendTransaction", "success", {
@@ -303,7 +420,10 @@ export const RpcMethodTesterModal = ({ isOpen, onClose }: RpcMethodTesterModalPr
                 to,
                 amount: testAmount,
                 type: "ETH",
+                gasUsed: gasEstimation.selected.gasLimit,
+                gasPrice: gasEstimation.selected.gasPrice,
               });
+              toast.success("Transaction sent successfully!");
             },
             onError: (error) => {
               addTestResult("eth_sendTransaction", "error", undefined, error.message);
@@ -319,10 +439,22 @@ export const RpcMethodTesterModal = ({ isOpen, onClose }: RpcMethodTesterModalPr
           args: [to as `0x${string}`, amount],
         });
 
+        const gasParams = gasEstimation.selected.maxFeePerGas
+          ? {
+              gas: gasEstimation.selected.gasLimit,
+              maxFeePerGas: gasEstimation.selected.maxFeePerGas,
+              maxPriorityFeePerGas: gasEstimation.selected.maxPriorityFeePerGas,
+            }
+          : {
+              gas: gasEstimation.selected.gasLimit,
+              gasPrice: gasEstimation.selected.gasPrice,
+            };
+
         sendTransaction(
           {
             to: fusdtAddress as `0x${string}`,
             data,
+            ...gasParams,
           },
           {
             onSuccess: (hash) => {
@@ -332,7 +464,10 @@ export const RpcMethodTesterModal = ({ isOpen, onClose }: RpcMethodTesterModalPr
                 amount: testAmount,
                 type: "FUSDT",
                 contract: fusdtAddress,
+                gasUsed: gasEstimation.selected.gasLimit,
+                gasPrice: gasEstimation.selected.gasPrice,
               });
+              toast.success("Transaction sent successfully!");
             },
             onError: (error) => {
               addTestResult("eth_sendTransaction", "error", undefined, error.message);
@@ -362,18 +497,16 @@ export const RpcMethodTesterModal = ({ isOpen, onClose }: RpcMethodTesterModalPr
         from: currentChain?.name,
         to: targetChain.name,
       });
+      toast.success("Chain switched successfully!");
     } catch (error) {
-      addTestResult(
-        "wallet_switchEthereumChain",
-        "error",
-        undefined,
-        error instanceof Error ? error.message : "Unknown error",
-      );
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      addTestResult("wallet_switchEthereumChain", "error", undefined, errorMessage);
     }
   };
 
   const testConnectionMethods = async (): Promise<void> => {
     try {
+      setIsTestingConnection(true);
       // Test basic connection info
       addTestResult("eth_accounts", "success", { accounts: address ? [address] : [] });
       addTestResult("eth_chainId", "success", { chainId, chainName: currentChain?.name });
@@ -387,13 +520,19 @@ export const RpcMethodTesterModal = ({ isOpen, onClose }: RpcMethodTesterModalPr
           type: connector.type,
         });
       }
+
+      toast.success("Connection methods tested successfully!");
     } catch (error) {
-      addTestResult("connection_methods", "error", undefined, error instanceof Error ? error.message : "Unknown error");
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      addTestResult("connection_methods", "error", undefined, errorMessage);
+    } finally {
+      setIsTestingConnection(false);
     }
   };
 
   const testReadMethods = (): void => {
     try {
+      setIsTestingRead(true);
       // Test balance reading
       if (ethBalance) {
         addTestResult("eth_getBalance", "success", {
@@ -429,8 +568,13 @@ export const RpcMethodTesterModal = ({ isOpen, onClose }: RpcMethodTesterModalPr
 
       addTestResult("eth_blockNumber", "success", { note: "Handled by wagmi/viem automatically" });
       addTestResult("eth_gasPrice", "success", { note: "Handled by wagmi/viem automatically" });
+
+      toast.success("Read methods executed successfully!");
     } catch (error) {
-      addTestResult("read_methods", "error", undefined, error instanceof Error ? error.message : "Unknown error");
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      addTestResult("read_methods", "error", undefined, errorMessage);
+    } finally {
+      setIsTestingRead(false);
     }
   };
 
@@ -481,7 +625,7 @@ export const RpcMethodTesterModal = ({ isOpen, onClose }: RpcMethodTesterModalPr
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
+      <DialogContent className="sm:max-w-4xl h-[85vh] overflow-hidden flex flex-col">
         <DialogHeader className="pb-4 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="space-y-1">
@@ -499,12 +643,16 @@ export const RpcMethodTesterModal = ({ isOpen, onClose }: RpcMethodTesterModalPr
               <Badge variant="secondary" className="text-xs">
                 {currentChain?.name || "Unknown"}
               </Badge>
+              <Badge variant="outline" className="text-xs">
+                <Wallet className="h-3 w-3 mr-1" />
+                {getWalletName()}
+              </Badge>
             </div>
           </div>
         </DialogHeader>
 
-        <div className="flex-1 min-h-0">
-          <Tabs defaultValue="transactions" className="w-full flex flex-col">
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <Tabs defaultValue="transactions" className="w-full flex flex-col h-full">
             <TabsList className="grid w-full grid-cols-4 flex-shrink-0">
               <TabsTrigger value="transactions">Send</TabsTrigger>
               <TabsTrigger value="signing">Sign</TabsTrigger>
@@ -512,8 +660,8 @@ export const RpcMethodTesterModal = ({ isOpen, onClose }: RpcMethodTesterModalPr
               <TabsTrigger value="results">Results</TabsTrigger>
             </TabsList>
 
-            <div className="mt-4">
-              <TabsContent value="transactions" className="space-y-6 mt-0 min-h-[460px]">
+            <div className="mt-4 flex-1 overflow-y-auto">
+              <TabsContent value="transactions" className="space-y-6 mt-0">
                 <div className="space-y-4">
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">
@@ -626,9 +774,104 @@ export const RpcMethodTesterModal = ({ isOpen, onClose }: RpcMethodTesterModalPr
                       </p>
                     </div>
                   </div>
+
+                  {/* Gas Estimation Display */}
+                  {address && testAmount && (testToAddress || address) && !isSendingTx && !isConfirmingTx && (
+                    <GasEstimationDisplay
+                      slow={gasEstimation.slow}
+                      standard={gasEstimation.standard}
+                      fast={gasEstimation.fast}
+                      selectedOption={gasEstimation.selectedOption}
+                      onOptionChange={gasEstimation.setSelectedOption}
+                      isLoading={gasEstimation.isLoading}
+                      error={gasEstimation.error}
+                      variant="default"
+                    />
+                  )}
+
+                  {/* Network Validation Warning */}
+                  {testType === "fusdt" && chainId !== sepolia.id && (
+                    <Alert className="bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800">
+                      <AlertCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                      <AlertDescription>
+                        <strong>Warning:</strong> FUSDT token transfers only work on Sepolia network. Current network:{" "}
+                        {currentChain?.name || `Chain ID: ${chainId}`}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => switchChain({ chainId: sepolia.id })}
+                          className="ml-2 h-6"
+                        >
+                          Switch to Sepolia
+                        </Button>
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  {/* FUSDT Data Status */}
+                  {testType === "fusdt" && (
+                    <div className="bg-muted/30 rounded-lg p-3 border">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Info className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm font-medium">FUSDT Token Status</span>
+                      </div>
+                      <div className="space-y-1 text-xs text-muted-foreground">
+                        <div className="flex items-center justify-between">
+                          <span>Contract: {fusdtAddress}</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => utilOpenExplorerLink(chainId, "token", fusdtAddress)}
+                            className="h-5 w-5 p-0 text-muted-foreground hover:text-foreground"
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                          </Button>
+                        </div>
+                        <div>Network: {currentChain?.name || `Chain ID: ${chainId}`}</div>
+                        <div>Decimals: {fusdtDecimals !== undefined ? fusdtDecimals : "Loading..."}</div>
+                        <div>
+                          Your Balance:{" "}
+                          {fusdtBalance ? formatTokenBalance(fusdtBalance, fusdtDecimals || 18, "FUSDT") : "Loading..."}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Faucet Link for Test ETH */}
+                  {address && !isSendingTx && !isConfirmingTx && (
+                    <div className="bg-blue-50 border border-blue-200 dark:bg-blue-900/20 dark:border-blue-800 rounded-lg p-3">
+                      <div className="flex items-start gap-3">
+                        <div className="w-5 h-5 bg-blue-100 dark:bg-blue-800/30 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <span className="text-blue-600 dark:text-blue-400 text-xs font-bold">?</span>
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm text-blue-800 dark:text-blue-300 mb-2">
+                            Don't have ETH for gas? Get free test ETH for testing.
+                          </p>
+                          <a
+                            href="https://cloud.google.com/application/web3/faucet/ethereum/sepolia"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium underline"
+                          >
+                            <span>Google Cloud Sepolia Faucet</span>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                              />
+                            </svg>
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <Button
                     onClick={testSendTransaction}
-                    disabled={isSendingTx || isConfirmingTx || !testAmount}
+                    disabled={isSendingTx || isConfirmingTx || !testAmount || !gasEstimation.selected}
                     className="w-full h-12 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-medium"
                   >
                     {isSendingTx || isConfirmingTx ? (
@@ -643,27 +886,78 @@ export const RpcMethodTesterModal = ({ isOpen, onClose }: RpcMethodTesterModalPr
                       </>
                     )}
                   </Button>
+
+                  {/* Transaction Status Indicator */}
+                  {(isSendingTx || isConfirmingTx) && (
+                    <div className="bg-blue-50 border border-blue-200 dark:bg-blue-900/20 dark:border-blue-800 rounded-lg p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Loader2 className="h-4 w-4 animate-spin text-blue-600 dark:text-blue-400" />
+                        <span className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                          Transaction in Progress
+                        </span>
+                      </div>
+                      <div className="text-xs text-blue-700 dark:text-blue-300 space-y-1">
+                        <div>
+                          Status:{" "}
+                          {isSendingTx
+                            ? `Waiting for ${getWalletName()} approval`
+                            : "Transaction confirmed, waiting for blockchain"}
+                        </div>
+                        <div>Type: {testType.toUpperCase()} transfer</div>
+                        <div>
+                          Amount: {testAmount} {testType === "fusdt" ? "FUSDT" : "ETH"}
+                        </div>
+                        <div>To: {testToAddress || "Self"}</div>
+                        {txHash && (
+                          <div className="flex items-center justify-between">
+                            <span className="font-mono text-xs break-all">
+                              Hash: {txHash.slice(0, 10)}...{txHash.slice(-8)}
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => utilOpenExplorerLink(chainId, "tx", txHash)}
+                              className="h-5 w-5 p-0 text-blue-600 hover:text-blue-800"
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                   {isTxConfirmed && (
-                    <Alert className="bg-green-50 border-green-200">
-                      <CheckCircle className="h-4 w-4 text-green-600" />
+                    <Alert className="bg-accent/5 border-accent/20">
+                      <CheckCircle className="h-4 w-4 text-accent-foreground" />
                       <AlertDescription className="flex items-center justify-between">
                         <span>Transaction confirmed successfully!</span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => copyToClipboard(txHash || "")}
-                          className="h-6 text-green-700 hover:text-green-800"
-                        >
-                          <Copy className="h-3 w-3 mr-1" />
-                          Copy Hash
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => txHash && utilOpenExplorerLink(chainId, "tx", txHash)}
+                            className="h-6 text-accent-foreground hover:text-accent-foreground/80"
+                          >
+                            <ExternalLink className="h-3 w-3 mr-1" />
+                            View
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => copyToClipboard(txHash || "")}
+                            className="h-6 text-accent-foreground hover:text-accent-foreground/80"
+                          >
+                            <Copy className="h-3 w-3 mr-1" />
+                            Copy Hash
+                          </Button>
+                        </div>
                       </AlertDescription>
                     </Alert>
                   )}
                 </div>
               </TabsContent>
 
-              <TabsContent value="signing" className="space-y-6 mt-0 min-h-[460px]">
+              <TabsContent value="signing" className="space-y-6 mt-0">
                 <div className="space-y-4">
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">
@@ -690,12 +984,17 @@ export const RpcMethodTesterModal = ({ isOpen, onClose }: RpcMethodTesterModalPr
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <Button
                       onClick={testPersonalSign}
-                      disabled={isSigningMessage || !testMessage.trim()}
+                      disabled={isSigningMessage || isTestingPersonalSign || !testMessage.trim()}
                       variant="outline"
                       className="h-12 flex flex-col gap-1"
                     >
-                      {isSigningMessage ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                      {isSigningMessage || isTestingPersonalSign ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span className="text-xs">
+                            {isSigningMessage ? "Waiting for wallet..." : "Processing..."}
+                          </span>
+                        </>
                       ) : (
                         <>
                           <span className="font-medium">Personal Sign</span>
@@ -705,12 +1004,17 @@ export const RpcMethodTesterModal = ({ isOpen, onClose }: RpcMethodTesterModalPr
                     </Button>
                     <Button
                       onClick={testTypedDataSign}
-                      disabled={isSigningTypedData}
+                      disabled={isSigningTypedData || isTestingTypedData}
                       variant="outline"
                       className="h-12 flex flex-col gap-1"
                     >
-                      {isSigningTypedData ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                      {isSigningTypedData || isTestingTypedData ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span className="text-xs">
+                            {isSigningTypedData ? "Waiting for wallet..." : "Processing..."}
+                          </span>
+                        </>
                       ) : (
                         <>
                           <span className="font-medium">Typed Data</span>
@@ -719,29 +1023,99 @@ export const RpcMethodTesterModal = ({ isOpen, onClose }: RpcMethodTesterModalPr
                       )}
                     </Button>
                   </div>
+
+                  {/* Show signing success feedback */}
+                  {testResults.some((result) => result.method === "personal_sign" && result.status === "success") && (
+                    <Alert className="bg-accent/5 border-accent/20">
+                      <CheckCircle className="h-4 w-4 text-accent-foreground" />
+                      <AlertDescription>
+                        Message signed successfully! Check the Results tab for the signature.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  {testResults.some(
+                    (result) => result.method === "eth_signTypedData_v4" && result.status === "success",
+                  ) && (
+                    <Alert className="bg-accent/5 border-accent/20">
+                      <CheckCircle className="h-4 w-4 text-accent-foreground" />
+                      <AlertDescription>
+                        Typed data signed successfully! Check the Results tab for the signature.
+                      </AlertDescription>
+                    </Alert>
+                  )}
                 </div>
               </TabsContent>
 
-              <TabsContent value="wallet" className="space-y-6 mt-0 min-h-[460px]">
+              <TabsContent value="wallet" className="space-y-6 mt-0">
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <Button
                       onClick={testConnectionMethods}
+                      disabled={isTestingConnection}
                       variant="outline"
                       className="h-16 p-4 flex flex-col items-center justify-center gap-1 text-center"
                     >
-                      <span className="font-medium text-sm">Connection Methods</span>
-                      <span className="text-xs text-muted-foreground">Test wallet connection info</span>
+                      {isTestingConnection ? (
+                        <>
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                          <span className="text-xs">Testing...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="font-medium text-sm">Connection Methods</span>
+                          <span className="text-xs text-muted-foreground">Test wallet connection info</span>
+                        </>
+                      )}
                     </Button>
                     <Button
                       onClick={testReadMethods}
+                      disabled={isTestingRead}
                       variant="outline"
                       className="h-16 p-4 flex flex-col items-center justify-center gap-1 text-center"
                     >
-                      <span className="font-medium text-sm">Read Methods</span>
-                      <span className="text-xs text-muted-foreground">Test balance and contract reads</span>
+                      {isTestingRead ? (
+                        <>
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                          <span className="text-xs">Reading...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="font-medium text-sm">Read Methods</span>
+                          <span className="text-xs text-muted-foreground">Test balance and contract reads</span>
+                        </>
+                      )}
                     </Button>
                   </div>
+
+                  {/* Show connection and read methods success feedback */}
+                  {testResults.some(
+                    (result) =>
+                      (result.method === "eth_accounts" ||
+                        result.method === "eth_chainId" ||
+                        result.method === "net_version") &&
+                      result.status === "success",
+                  ) && (
+                    <Alert className="bg-accent/5 border-accent/20">
+                      <CheckCircle className="h-4 w-4 text-accent-foreground" />
+                      <AlertDescription>
+                        Connection methods tested successfully! Check the Results tab for details.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  {testResults.some(
+                    (result) =>
+                      (result.method === "eth_getBalance" || result.method === "eth_call") &&
+                      result.status === "success",
+                  ) && (
+                    <Alert className="bg-accent/5 border-accent/20">
+                      <CheckCircle className="h-4 w-4 text-accent-foreground" />
+                      <AlertDescription>
+                        Read methods executed successfully! Check the Results tab for balance details.
+                      </AlertDescription>
+                    </Alert>
+                  )}
 
                   <Button
                     onClick={testChainSwitch}
@@ -761,6 +1135,18 @@ export const RpcMethodTesterModal = ({ isOpen, onClose }: RpcMethodTesterModalPr
                       </>
                     )}
                   </Button>
+
+                  {/* Show chain switch success feedback */}
+                  {testResults.some(
+                    (result) => result.method === "wallet_switchEthereumChain" && result.status === "success",
+                  ) && (
+                    <Alert className="bg-accent/5 border-accent/20">
+                      <CheckCircle className="h-4 w-4 text-accent-foreground" />
+                      <AlertDescription>
+                        Chain switched successfully! Check the Results tab for details.
+                      </AlertDescription>
+                    </Alert>
+                  )}
 
                   <Separator />
 
@@ -787,7 +1173,7 @@ export const RpcMethodTesterModal = ({ isOpen, onClose }: RpcMethodTesterModalPr
                 </div>
               </TabsContent>
 
-              <TabsContent value="results" className="space-y-4 mt-0 min-h-[460px]">
+              <TabsContent value="results" className="space-y-4 mt-0">
                 <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border">
                   <div className="flex items-center gap-2">
                     <Info className="h-4 w-4 text-muted-foreground" />
@@ -801,7 +1187,7 @@ export const RpcMethodTesterModal = ({ isOpen, onClose }: RpcMethodTesterModalPr
                   </Button>
                 </div>
 
-                <div className="space-y-2 max-h-80 overflow-y-auto">
+                <div className="space-y-2 overflow-y-auto">
                   {testResults.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
                       <PlayCircle className="h-12 w-12 mx-auto mb-3 opacity-50" />
@@ -825,7 +1211,7 @@ export const RpcMethodTesterModal = ({ isOpen, onClose }: RpcMethodTesterModalPr
                                 key={explorerIndex}
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => openExplorerLink(explorable.type, explorable.value)}
+                                onClick={() => utilOpenExplorerLink(chainId, explorable.type, explorable.value)}
                                 className="text-xs px-2"
                               >
                                 <ExternalLink className="h-3 w-3 mr-1" />

@@ -1,16 +1,17 @@
-import { useAccount, useDisconnect, useEnsAvatar, useEnsName } from "wagmi";
+import { useAccount, useDisconnect, useEnsAvatar, useEnsName, useChainId } from "wagmi";
 import { usePasskeyName } from "@/hooks/use-passkey-name";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { CheckCircle, Shield, LogOut, Copy, Gift, TestTube, Settings } from "lucide-react";
+import { CheckCircle, Shield, LogOut, Copy, Gift, TestTube, Settings, ExternalLink } from "lucide-react";
 import { useState } from "react";
 import { RewardsModal } from "@/components/rewards-modal";
 import { SimpleTestModal } from "@/components/simple-test-modal";
 import { TokenBalances } from "@/components/token-balances";
 import { RpcMethodTesterModal } from "@/components/rpc-method-tester-modal";
+import { openExplorerLink } from "@/utils/explorer-links";
 
 export function Account() {
   const { address, connector } = useAccount();
@@ -18,6 +19,7 @@ export function Account() {
   const { data: ensName } = useEnsName({ address });
   const { data: ensAvatar } = useEnsAvatar({ name: ensName! });
   const passkeyName = usePasskeyName();
+  const chainId = useChainId();
   const [copied, setCopied] = useState(false);
   const [isRewardsModalOpen, setIsRewardsModalOpen] = useState(false);
   const [isTestModalOpen, setIsTestModalOpen] = useState(false);
@@ -72,9 +74,19 @@ export function Account() {
             <div className="bg-muted/50 rounded-lg p-4 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-muted-foreground">Smart Account Address</span>
-                <Button variant="ghost" size="sm" onClick={copyAddress} className="h-6 w-6 p-0">
-                  {copied ? <CheckCircle className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
-                </Button>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => address && openExplorerLink(chainId, "address", address)}
+                    className="h-6 w-6 p-0"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={copyAddress} className="h-6 w-6 p-0">
+                    {copied ? <CheckCircle className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
+                  </Button>
+                </div>
               </div>
               <div className="font-mono text-sm break-all">{address}</div>
               {ensName && <div className="text-sm text-blue-600 font-medium">ENS: {ensName}</div>}

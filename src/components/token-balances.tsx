@@ -8,33 +8,12 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Coins, RefreshCw, TrendingUp, AlertCircle, Wallet, ExternalLink } from "lucide-react";
 import { useState } from "react";
 import { useChainId } from "wagmi";
-import { holesky, sepolia } from "wagmi/chains";
+import { openExplorerLink } from "@/utils/explorer-links";
 
 interface TokenBalanceItemProps {
   readonly token: TokenBalance;
   readonly isEth?: boolean;
 }
-
-/**
- * Get the explorer URL for a token address based on the chain
- */
-const getExplorerUrl = (chainId: number, address: string, isEth: boolean = false): string => {
-  const baseUrl = (() => {
-    switch (chainId) {
-      case sepolia.id:
-        return "https://sepolia.etherscan.io";
-      case holesky.id:
-        return "https://holesky.etherscan.io";
-      default:
-        return "https://sepolia.etherscan.io"; // Fallback to Sepolia
-    }
-  })();
-
-  if (isEth) {
-    return `${baseUrl}/address/${address}`;
-  }
-  return `${baseUrl}/token/${address}`;
-};
 
 /**
  * Formats a balance number for display with appropriate precision and large number formatting
@@ -120,7 +99,6 @@ const TokenBalanceItem = ({ token, isEth = false }: TokenBalanceItemProps) => {
   // Note: Removed isRewardsToken logic - treat all tokens as regular tokens
 
   const { display: formattedDisplay, exact: exactValue } = formatBalanceDisplay(token.formattedBalance);
-  const explorerUrl = getExplorerUrl(chainId, token.address, isEth);
 
   return (
     <div className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
@@ -151,7 +129,7 @@ const TokenBalanceItem = ({ token, isEth = false }: TokenBalanceItemProps) => {
                   variant="ghost"
                   size="sm"
                   className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
-                  onClick={() => window.open(explorerUrl, "_blank", "noopener,noreferrer")}
+                  onClick={() => openExplorerLink(chainId, isEth ? "address" : "token", token.address)}
                 >
                   <ExternalLink className="h-3 w-3" />
                 </Button>

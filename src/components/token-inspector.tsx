@@ -1,14 +1,29 @@
-import { useReadContracts } from "wagmi";
+import { useReadContracts, useChainId } from "wagmi";
 import { erc20Abi } from "viem";
 import { sepolia } from "wagmi/chains";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Search } from "lucide-react";
+import { ExternalLink, Search, Copy } from "lucide-react";
+import { openExplorerLink, getExplorerName } from "@/utils/explorer-links";
+import { useState } from "react";
 
 const REWARDS_TOKEN_ADDRESS = "0x118f6c0090ffd227cbefe1c6d8a803198c4422f0" as const;
 
 export const TokenInspector = () => {
+  const chainId = useChainId();
+  const [copied, setCopied] = useState(false);
+
+  const copyToClipboard = async (text: string): Promise<void> => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  };
+
   // Use wagmi hook to fetch token metadata
   const {
     data: tokenMetadata,
@@ -49,10 +64,6 @@ export const TokenInspector = () => {
         }
       : null;
 
-  const openEtherscan = (): void => {
-    window.open(`https://sepolia.etherscan.io/token/${REWARDS_TOKEN_ADDRESS}`, "_blank");
-  };
-
   return (
     <Card className="w-full">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
@@ -60,9 +71,14 @@ export const TokenInspector = () => {
           <Search className="h-5 w-5 text-primary" />
           <CardTitle className="text-lg">Rewards Token Inspector</CardTitle>
         </div>
-        <Button variant="outline" size="sm" onClick={openEtherscan} className="h-8">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => openExplorerLink(chainId, "token", REWARDS_TOKEN_ADDRESS)}
+          className="h-8"
+        >
           <ExternalLink className="h-4 w-4 mr-1" />
-          Etherscan
+          {getExplorerName(chainId)}
         </Button>
       </CardHeader>
 
@@ -70,9 +86,27 @@ export const TokenInspector = () => {
         <div className="bg-muted/50 rounded-lg p-4 space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium">Contract Address</span>
-            <Badge variant="secondary" className="font-mono text-xs">
-              {REWARDS_TOKEN_ADDRESS.slice(0, 6)}...{REWARDS_TOKEN_ADDRESS.slice(-4)}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => openExplorerLink(chainId, "token", REWARDS_TOKEN_ADDRESS)}
+                className="h-6 w-6 p-0"
+              >
+                <ExternalLink className="h-3 w-3" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => copyToClipboard(REWARDS_TOKEN_ADDRESS)}
+                className="h-6 w-6 p-0"
+              >
+                {copied ? <Copy className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
+              </Button>
+              <Badge variant="secondary" className="font-mono text-xs">
+                {REWARDS_TOKEN_ADDRESS.slice(0, 6)}...{REWARDS_TOKEN_ADDRESS.slice(-4)}
+              </Badge>
+            </div>
           </div>
           <div className="text-xs font-mono text-muted-foreground break-all">{REWARDS_TOKEN_ADDRESS}</div>
         </div>
