@@ -2,8 +2,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
 import { Fuel, AlertTriangle, Info, Clock } from "lucide-react";
 import { formatUnits } from "viem";
 import type { GasOption } from "@/hooks/use-gas-estimation";
@@ -71,20 +69,20 @@ export const GasEstimationDisplay = ({
     }
 
     return (
-      <Card className="mt-2 border-red-200 bg-red-50">
+      <Card className="mt-2 border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20">
         <CardContent className="p-3">
           <div className="flex items-start gap-3">
-            <div className="w-5 h-5 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-              <AlertTriangle className="h-3 w-3 text-red-600" />
+            <div className="w-5 h-5 bg-red-100 dark:bg-red-800/30 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+              <AlertTriangle className="h-3 w-3 text-red-600 dark:text-red-400" />
             </div>
             <div className="flex-1 min-w-0">
-              <h4 className="text-sm font-medium text-red-800 mb-1">{cleanMessage}</h4>
-              {details && <p className="text-xs text-red-700 mb-2 leading-relaxed">{details}</p>}
-              <details className="text-xs text-red-600">
-                <summary className="cursor-pointer hover:text-red-800 font-medium select-none">
+              <h4 className="text-sm font-medium text-red-800 dark:text-red-300 mb-1">{cleanMessage}</h4>
+              {details && <p className="text-xs text-red-700 dark:text-red-400 mb-2 leading-relaxed">{details}</p>}
+              <details className="text-xs text-red-600 dark:text-red-400">
+                <summary className="cursor-pointer hover:text-red-800 dark:hover:text-red-300 font-medium select-none">
                   Technical details
                 </summary>
-                <div className="mt-1 p-2 bg-red-100 rounded text-xs font-mono break-words max-w-full overflow-hidden">
+                <div className="mt-1 p-2 bg-red-100 dark:bg-red-800/20 rounded text-xs font-mono break-words max-w-full overflow-hidden">
                   {errorMessage}
                 </div>
               </details>
@@ -140,22 +138,22 @@ export const GasEstimationDisplay = ({
       id: "slow" as const,
       label: "Slow",
       data: slow,
-      bgColor: "bg-yellow-50 border-yellow-200",
-      iconColor: "text-yellow-600",
+      bgColor: "bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800",
+      iconColor: "text-yellow-600 dark:text-yellow-400",
     },
     {
       id: "standard" as const,
       label: "Standard",
       data: standard,
-      bgColor: "bg-blue-50 border-blue-200",
-      iconColor: "text-blue-600",
+      bgColor: "bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800",
+      iconColor: "text-blue-600 dark:text-blue-400",
     },
     {
       id: "fast" as const,
       label: "Fast",
       data: fast,
-      bgColor: "bg-green-50 border-green-200",
-      iconColor: "text-green-600",
+      bgColor: "bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800",
+      iconColor: "text-green-600 dark:text-green-400",
     },
   ];
 
@@ -172,62 +170,59 @@ export const GasEstimationDisplay = ({
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-0">
-        <RadioGroup
-          value={selectedOption}
-          onValueChange={(value) => onOptionChange(value as GasOption)}
-          className="space-y-3"
-        >
+        <div className="space-y-3">
           {gasOptions.map((option) => (
             <div
               key={option.id}
               className={`relative border rounded-lg p-3 cursor-pointer transition-colors ${
                 selectedOption === option.id ? option.bgColor : "hover:bg-muted/50"
               }`}
+              onClick={() => onOptionChange(option.id)}
             >
-              <Label htmlFor={option.id} className="cursor-pointer">
-                <RadioGroupItem value={option.id} id={option.id} className="sr-only" />
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`w-8 h-8 rounded-full bg-muted/30 flex items-center justify-center ${
-                        selectedOption === option.id ? option.iconColor : "text-muted-foreground"
-                      }`}
-                    >
-                      <Clock className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <div className="font-medium text-sm">{option.label}</div>
-                      <div className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {option.data.estimatedTime}
-                      </div>
-                    </div>
+              {/* Selection indicator */}
+              {selectedOption === option.id && (
+                <div className="absolute top-3 right-3">
+                  <div className="w-2 h-2 bg-primary rounded-full"></div>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`w-8 h-8 rounded-full bg-muted/30 flex items-center justify-center ${
+                      selectedOption === option.id ? option.iconColor : "text-muted-foreground"
+                    }`}
+                  >
+                    <Clock className="h-4 w-4" />
                   </div>
-                  <div className="text-right">
-                    <div className="text-sm font-medium">{parseFloat(option.data.totalCostEth).toFixed(6)} ETH</div>
-                    {option.data.totalCostUsd && (
-                      <div className="text-xs text-muted-foreground">${option.data.totalCostUsd}</div>
-                    )}
-                    <div className="text-xs text-muted-foreground mt-1">
-                      {formatUnits(option.data.gasPrice, 9)} Gwei
+                  <div>
+                    <div className="font-medium text-sm">{option.label}</div>
+                    <div className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {option.data.estimatedTime}
                     </div>
                   </div>
                 </div>
-                {selectedOption === option.id && (
-                  <div className="absolute top-2 right-2">
-                    <div className="w-2 h-2 bg-primary rounded-full"></div>
+
+                <div className="text-right pr-6">
+                  <div className="text-sm font-medium">{parseFloat(option.data.totalCostEth).toFixed(6)} ETH</div>
+                  {option.data.totalCostUsd && (
+                    <div className="text-xs text-muted-foreground">${option.data.totalCostUsd}</div>
+                  )}
+                  <div className="text-xs text-muted-foreground mt-1 font-mono">
+                    {formatUnits(option.data.gasPrice, 9)} Gwei
                   </div>
-                )}
-              </Label>
+                </div>
+              </div>
             </div>
           ))}
-        </RadioGroup>
+        </div>
 
         {/* Gas limit info */}
         <div className="mt-4 pt-3 border-t">
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">Gas Limit</span>
-            <span className="font-mono">{selectedGas.gasLimit.toLocaleString()}</span>
+            <span className="font-mono font-medium">{selectedGas.gasLimit.toLocaleString()}</span>
           </div>
         </div>
 
