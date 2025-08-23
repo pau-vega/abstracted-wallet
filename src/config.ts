@@ -1,4 +1,5 @@
 import { createConfig, http } from "wagmi";
+import { metaMask } from "wagmi/connectors";
 import { sepolia, polygonAmoy } from "wagmi/chains";
 import { passkeysWalletConnector } from "@/connectors/passkeys-connector";
 import { createStorage } from "wagmi";
@@ -14,9 +15,10 @@ export const config = createConfig({
       appName: "Wagmi Passkeys App",
       passkeyName: "My Wallet", // Default name (users can customize this)
     }),
+    metaMask(),
   ],
   transports: {
-    [sepolia.id]: http("https://eth-sepolia.g.alchemy.com/v2/8SAu08b803dIxRZ1WEhVYX02aiVRkQHX"),
+    [sepolia.id]: http(),
     [polygonAmoy.id]: http("https://rpc-amoy.polygon.technology"),
   },
   // Enable session persistence with localStorage
